@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Question, Stats, getNextQuestion, submitAnswer, getStats } from './api'
+import { useState, useEffect, useCallback } from 'react'
+import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes } from './api'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -10,20 +10,58 @@ function App() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [startTime, setStartTime] = useState<number>(Date.now())
   const [showTranslations, setShowTranslations] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [isSettingsEntering, setIsSettingsEntering] = useState(false)
+  const [selectedSections, setSelectedSections] = useState<string[]>([])
+  const [availableSections, setAvailableSections] = useState<string[]>([])
+  const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([])
+  const [quizzesBySection, setQuizzesBySection] = useState<QuizzesBySection[]>([])
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [shuffledOptions, setShuffledOptions] = useState<QuestionOption[]>([])
+  const [shuffleMode, setShuffleMode] = useState(false)
+  const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
+  const [questionStrength, setQuestionStrength] = useState<{ level: string; color: string; intervalDays: number } | null>(null)
+  const [timeframeDays, setTimeframeDays] = useState(7)
+  const [onlyDueMode, setOnlyDueMode] = useState(true)
+
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const newArray = [...array]
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+    }
+    return newArray
+  }
 
   const loadQuestion = async () => {
     try {
       setLoading(true)
       setError(null)
-      const nextQuestion = await getNextQuestion()
+
+      if (selectedQuizzes.length === 0) {
+        setQuestion(null)
+        setLoading(false)
+        return
+      }
+
+      const sections = selectedSections.length > 0 ? selectedSections : undefined
+      const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
+      const nextQuestion = await getNextQuestion(sections, quizzes, shuffleMode, onlyDueMode)
       setQuestion(nextQuestion)
+      setShuffledOptions(shuffleArray(nextQuestion.options))
       setSelectedOption(null)
       setAnswered(false)
       setStartTime(Date.now())
       setShowTranslations(false)
-    } catch (err) {
-      setError('Failed to load question. Make sure the backend is running.')
-      console.error(err)
+      setQuestionStrength(null)
+    } catch (err: any) {
+      if (err.isNoDue) {
+        setError(err.message)
+        setQuestion(null)
+      } else {
+        setError('Failed to load question. Make sure the backend is running.')
+        console.error(err)
+      }
     } finally {
       setLoading(false)
     }
@@ -31,24 +69,90 @@ function App() {
 
   const loadStats = async () => {
     try {
-      const currentStats = await getStats()
+      if (selectedQuizzes.length === 0) {
+        setStats(null)
+        return
+      }
+
+      const sections = selectedSections.length > 0 ? selectedSections : undefined
+      const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
+      const currentStats = await getStats(sections, quizzes, timeframeDays)
       setStats(currentStats)
     } catch (err) {
       console.error('Failed to load stats:', err)
     }
   }
 
+  const loadSections = async () => {
+    try {
+      const sections = await getSections()
+      setAvailableSections(sections)
+
+      const quizzesData = await getQuizzes()
+      setQuizzesBySection(quizzesData)
+
+      // Try to load from localStorage
+      const savedSections = localStorage.getItem('selectedSections')
+      const savedQuizzes = localStorage.getItem('selectedQuizzes')
+      const savedShuffleMode = localStorage.getItem('shuffleMode')
+
+      if (savedSections) {
+        try {
+          const parsed = JSON.parse(savedSections)
+          setSelectedSections(parsed)
+        } catch {
+          setSelectedSections(sections)
+        }
+      } else {
+        setSelectedSections(sections)
+      }
+
+      if (savedQuizzes) {
+        try {
+          const parsed = JSON.parse(savedQuizzes)
+          setSelectedQuizzes(parsed)
+        } catch {
+          // Select all quizzes by default
+          const allQuizUrls = quizzesData.flatMap(s => s.quizzes.map(q => q.url))
+          setSelectedQuizzes(allQuizUrls)
+        }
+      } else {
+        // Select all quizzes by default
+        const allQuizUrls = quizzesData.flatMap(s => s.quizzes.map(q => q.url))
+        setSelectedQuizzes(allQuizUrls)
+      }
+
+      if (savedShuffleMode) {
+        setShuffleMode(savedShuffleMode === 'true')
+      }
+
+      const savedOnlyDueMode = localStorage.getItem('onlyDueMode')
+      if (savedOnlyDueMode !== null) {
+        setOnlyDueMode(savedOnlyDueMode === 'true')
+      }
+    } catch (err) {
+      console.error('Failed to load sections:', err)
+    }
+  }
+
   useEffect(() => {
-    loadQuestion()
-    loadStats()
+    loadSections()
   }, [])
+
+  // Load question and stats when selections or shuffle mode change
+  useEffect(() => {
+    if (availableSections.length > 0) {
+      loadQuestion()
+      loadStats()
+    }
+  }, [selectedSections, selectedQuizzes, shuffleMode, timeframeDays, onlyDueMode])
 
   const handleOptionClick = async (index: number) => {
     if (!question) return
 
     // If already answered, clicking the correct answer advances to next question
     if (answered) {
-      if (question.options[index].correct) {
+      if (shuffledOptions[index].correct) {
         loadQuestion()
       }
       return
@@ -58,66 +162,365 @@ function App() {
     setSelectedOption(index)
     setAnswered(true)
 
-    const isCorrect = question.options[index].correct
+    const isCorrect = shuffledOptions[index].correct
     const responseTimeMs = Date.now() - startTime
 
+    // Update session stats
+    setSessionStats(prev => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1
+    }))
+
     try {
-      await submitAnswer(
+      const response = await submitAnswer(
         question.id,
         isCorrect,
-        question.options[index].text,
+        shuffledOptions[index].text,
         responseTimeMs
       )
+      setQuestionStrength(response.strength)
       await loadStats()
     } catch (err) {
       console.error('Failed to submit answer:', err)
     }
   }
 
+  const toggleSection = (section: string) => {
+    const sectionData = quizzesBySection.find(s => s.section === section)
+    if (!sectionData) return
+
+    const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
+    const allSelected = sectionQuizUrls.every(url => selectedQuizzes.includes(url))
+
+    if (allSelected) {
+      // Deselect all quizzes in this section
+      const newQuizzes = selectedQuizzes.filter(url => !sectionQuizUrls.includes(url))
+      setSelectedQuizzes(newQuizzes)
+      localStorage.setItem('selectedQuizzes', JSON.stringify(newQuizzes))
+    } else {
+      // Select all quizzes in this section
+      const newQuizzes = [...new Set([...selectedQuizzes, ...sectionQuizUrls])]
+      setSelectedQuizzes(newQuizzes)
+      localStorage.setItem('selectedQuizzes', JSON.stringify(newQuizzes))
+    }
+  }
+
+  const toggleQuiz = (quizUrl: string) => {
+    setSelectedQuizzes(prev => {
+      const newQuizzes = prev.includes(quizUrl)
+        ? prev.filter(url => url !== quizUrl)
+        : [...prev, quizUrl]
+      localStorage.setItem('selectedQuizzes', JSON.stringify(newQuizzes))
+      return newQuizzes
+    })
+  }
+
+  const toggleSectionExpanded = (section: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(section)) {
+        newSet.delete(section)
+      } else {
+        newSet.add(section)
+      }
+      return newSet
+    })
+  }
+
+  const selectAllQuizzes = () => {
+    const allQuizUrls = quizzesBySection.flatMap(s => s.quizzes.map(q => q.url))
+    setSelectedQuizzes(allQuizUrls)
+    localStorage.setItem('selectedQuizzes', JSON.stringify(allQuizUrls))
+  }
+
+  const deselectAllQuizzes = () => {
+    setSelectedQuizzes([])
+    localStorage.setItem('selectedQuizzes', JSON.stringify([]))
+  }
+
+  const toggleShuffleMode = () => {
+    setShuffleMode(prev => {
+      const newValue = !prev
+      localStorage.setItem('shuffleMode', String(newValue))
+      return newValue
+    })
+  }
+
+  const toggleOnlyDueMode = () => {
+    setOnlyDueMode(prev => {
+      const newValue = !prev
+      localStorage.setItem('onlyDueMode', String(newValue))
+      return newValue
+    })
+  }
+
+  const openSettings = () => {
+    setShowSettings(true)
+    setIsSettingsEntering(true)
+    setTimeout(() => setIsSettingsEntering(false), 300)
+  }
+
+  const closeSettings = () => {
+    setShowSettings(false)
+    setIsSettingsEntering(false)
+  }
+
   if (loading) {
     return (
       <div className="app">
         <div className="header">
-          <h1>Quizz</h1>
-          <p>Spaced Repetition Quiz</p>
+          <h1>Quiz</h1>
         </div>
         <div className="loading">Loading question...</div>
       </div>
     )
   }
 
-  if (error) {
+  if (error || !question) {
     return (
-      <div className="app">
-        <div className="header">
-          <h1>Quizz</h1>
-          <p>Spaced Repetition Quiz</p>
+      <>
+        {showSettings && (
+          <>
+            <div className="settings-overlay" onClick={closeSettings} />
+            <div className={`settings-panel ${isSettingsEntering ? 'entering' : ''}`}>
+              <div className="settings-header">
+                <h2>Filter Questions</h2>
+                <button className="close-button" onClick={closeSettings}>✕</button>
+              </div>
+              <div className="settings-content">
+                <div className="settings-section">
+                  <div className="settings-section-header">
+                    <h3>Question Order</h3>
+                  </div>
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={shuffleMode}
+                      onChange={toggleShuffleMode}
+                    />
+                    <span>Shuffle questions (random order)</span>
+                  </label>
+                  {!shuffleMode && (
+                    <>
+                      <label className="checkbox-item" style={{ marginTop: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={onlyDueMode}
+                          onChange={toggleOnlyDueMode}
+                        />
+                        <span>Only show questions due for review today</span>
+                      </label>
+                      <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+                        Using spaced repetition algorithm
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="settings-section">
+                  <div className="settings-section-header">
+                    <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
+                    <div className="settings-actions">
+                      <button onClick={selectAllQuizzes} className="text-button">All</button>
+                      <button onClick={deselectAllQuizzes} className="text-button">None</button>
+                    </div>
+                  </div>
+                  <div className="quiz-tree">
+                    {quizzesBySection.map(sectionData => {
+                      const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
+                      const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
+                      const totalCount = sectionQuizUrls.length
+                      const allSelected = selectedCount === totalCount
+                      const someSelected = selectedCount > 0 && selectedCount < totalCount
+                      const isExpanded = expandedSections.has(sectionData.section)
+
+                      return (
+                        <div key={sectionData.section} className="section-group">
+                          <div className="section-header-row">
+                            <button
+                              className="expand-button"
+                              onClick={() => toggleSectionExpanded(sectionData.section)}
+                            >
+                              {isExpanded ? '▼' : '▶'}
+                            </button>
+                            <label className="section-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={allSelected}
+                                ref={input => {
+                                  if (input) input.indeterminate = someSelected
+                                }}
+                                onChange={() => toggleSection(sectionData.section)}
+                              />
+                              <span className="section-name">
+                                {sectionData.section} ({selectedCount}/{totalCount})
+                              </span>
+                            </label>
+                          </div>
+                          {isExpanded && (
+                            <div className="quiz-list">
+                              {sectionData.quizzes.map(quiz => (
+                                <label key={quiz.url} className="quiz-item">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedQuizzes.includes(quiz.url)}
+                                    onChange={() => toggleQuiz(quiz.url)}
+                                  />
+                                  <span className="quiz-title">{quiz.title}</span>
+                                  <span className="quiz-count">({quiz.questionCount})</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="app">
+          <div className="header">
+            <h1>Quiz</h1>
+            <button
+              className="settings-button"
+              onClick={openSettings}
+              title="Filter questions"
+            >
+              ⚙️
+            </button>
+          </div>
+          <div className={error ? "error" : "loading"}>
+            {error || (selectedQuizzes.length === 0
+              ? 'No quizzes selected. Click the ⚙️ to select quizzes.'
+              : 'No question available')}
+          </div>
         </div>
-        <div className="error">{error}</div>
-      </div>
+      </>
     )
   }
 
-  if (!question) {
-    return (
-      <div className="app">
-        <div className="header">
-          <h1>Quizz</h1>
-          <p>Spaced Repetition Quiz</p>
-        </div>
-        <div className="loading">No question available</div>
-      </div>
-    )
-  }
-
-  const correctOptionIndex = question.options.findIndex(opt => opt.correct)
+  const correctOptionIndex = shuffledOptions.findIndex(opt => opt.correct)
 
   return (
-    <div className="app">
-      <div className="header">
-        <h1>Quizz</h1>
-        <p>Spaced Repetition Quiz</p>
-      </div>
+    <>
+      {showSettings && (
+        <>
+          <div className="settings-overlay" onClick={closeSettings} />
+          <div className={`settings-panel ${isSettingsEntering ? 'entering' : ''}`}>
+            <div className="settings-header">
+              <h2>Filter Questions</h2>
+              <button className="close-button" onClick={closeSettings}>✕</button>
+            </div>
+            <div className="settings-content">
+              <div className="settings-section">
+                <div className="settings-section-header">
+                  <h3>Question Order</h3>
+                </div>
+                <label className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={shuffleMode}
+                    onChange={toggleShuffleMode}
+                  />
+                  <span>Shuffle questions (random order)</span>
+                </label>
+                {!shuffleMode && (
+                  <>
+                    <label className="checkbox-item" style={{ marginTop: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={onlyDueMode}
+                        onChange={toggleOnlyDueMode}
+                      />
+                      <span>Only show questions due for review today</span>
+                    </label>
+                    <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+                      Using spaced repetition algorithm
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="settings-section">
+                <div className="settings-section-header">
+                  <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
+                  <div className="settings-actions">
+                    <button onClick={selectAllQuizzes} className="text-button">All</button>
+                    <button onClick={deselectAllQuizzes} className="text-button">None</button>
+                  </div>
+                </div>
+                <div className="quiz-tree">
+                  {quizzesBySection.map(sectionData => {
+                    const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
+                    const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
+                    const totalCount = sectionQuizUrls.length
+                    const allSelected = selectedCount === totalCount
+                    const someSelected = selectedCount > 0 && selectedCount < totalCount
+                    const isExpanded = expandedSections.has(sectionData.section)
+
+                    return (
+                      <div key={sectionData.section} className="section-group">
+                        <div className="section-header-row">
+                          <button
+                            className="expand-button"
+                            onClick={() => toggleSectionExpanded(sectionData.section)}
+                          >
+                            {isExpanded ? '▼' : '▶'}
+                          </button>
+                          <label className="section-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              ref={input => {
+                                if (input) input.indeterminate = someSelected
+                              }}
+                              onChange={() => toggleSection(sectionData.section)}
+                            />
+                            <span className="section-name">
+                              {sectionData.section} ({selectedCount}/{totalCount})
+                            </span>
+                          </label>
+                        </div>
+                        {isExpanded && (
+                          <div className="quiz-list">
+                            {sectionData.quizzes.map(quiz => (
+                              <label key={quiz.url} className="quiz-item">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedQuizzes.includes(quiz.url)}
+                                  onChange={() => toggleQuiz(quiz.url)}
+                                />
+                                <span className="quiz-title">{quiz.title}</span>
+                                <span className="quiz-count">({quiz.questionCount})</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="app">
+        <div className="header">
+          <h1>Quiz</h1>
+          <button
+            className="settings-button"
+            onClick={openSettings}
+            title="Filter questions"
+          >
+            ⚙️
+          </button>
+        </div>
 
       {stats && (
         <div className="stats-bar">
@@ -126,12 +529,35 @@ function App() {
             <div className="stat-label">Studied</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{stats.totalAttempts}</div>
-            <div className="stat-label">Total Attempts</div>
+            <div className="stat-value">{stats.overallAccuracy.toFixed(1)}%</div>
+            <div className="stat-label">
+              <select
+                value={timeframeDays}
+                onChange={(e) => setTimeframeDays(Number(e.target.value))}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  fontSize: '0.75rem',
+                  color: '#9ca3af',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="1">Today</option>
+                <option value="7">Past Week</option>
+                <option value="30">Past Month</option>
+                <option value="90">Past 3 Months</option>
+                <option value="0">All Time</option>
+              </select>
+            </div>
           </div>
           <div className="stat">
-            <div className="stat-value">{stats.overallAccuracy.toFixed(1)}%</div>
-            <div className="stat-label">Accuracy</div>
+            <div className="stat-value">
+              {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%
+            </div>
+            <div className="stat-label">Session ({sessionStats.total})</div>
           </div>
         </div>
       )}
@@ -163,7 +589,7 @@ function App() {
           </div>
 
           <div className="options">
-            {question.options.map((option, index) => {
+            {shuffledOptions.map((option, index) => {
               let className = 'option-button'
 
               if (answered) {
@@ -198,11 +624,21 @@ function App() {
               ) : (
                 <strong>Incorrect. Click the correct answer to continue.</strong>
               )}
+              {questionStrength && (
+                <div className="strength-indicator" style={{ marginTop: '12px', fontSize: '0.875rem' }}>
+                  <span style={{ color: questionStrength.color, fontWeight: '600' }}>
+                    {questionStrength.level}
+                  </span>
+                  {' • '}
+                  Next review in {questionStrength.intervalDays} day{questionStrength.intervalDays !== 1 ? 's' : ''}
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
     </div>
+    </>
   )
 }
 

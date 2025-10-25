@@ -22,10 +22,18 @@ loadQuestions().catch(console.error);
 /**
  * Get all questions flattened into a single array
  */
-function getAllQuestions(): Question[] {
+function getAllQuestions(sectionFilter?: string[], quizFilter?: string[]): Question[] {
   const allQuestions: Question[] = [];
   for (const section of questionsData) {
+    // Skip if section filter is provided and this section is not included
+    if (sectionFilter && sectionFilter.length > 0 && !sectionFilter.includes(section.section)) {
+      continue;
+    }
     for (const quiz of section.quizzes) {
+      // Skip if quiz filter is provided and this quiz is not included
+      if (quizFilter && quizFilter.length > 0 && !quizFilter.includes(quiz.url)) {
+        continue;
+      }
       allQuestions.push(...quiz.questions);
     }
   }
@@ -33,56 +41,115 @@ function getAllQuestions(): Question[] {
 }
 
 /**
- * GET /api/questions/next
- * Get the next question to study based on spaced repetition
+ * GET /api/sections
+ * Get all available sections
  */
-router.get('/questions/next', async (req: Request, res: Response) => {
+router.get('/sections', async (req: Request, res: Response) => {
   try {
-    const allQuestions = getAllQuestions();
+    const sections = questionsData.map(section => section.section);
+    res.json(sections);
+  } catch (error) {
+    console.error('Error getting sections:', error);
+    res.status(500).json({ error: 'Failed to get sections' });
+  }
+});
+
+/**
+ * GET /api/quizzes
+ * Get all quizzes grouped by section
+ */
+router.get('/quizzes', async (req: Request, res: Response) => {
+  try {
+    const quizzesBySection = questionsData.map(section => ({
+      section: section.section,
+      quizzes: section.quizzes.map(quiz => ({
+        title: quiz.title,
+        url: quiz.url,
+        questionCount: quiz.questionCount,
+      }))
+    }));
+    res.json(quizzesBySection);
+  } catch (error) {
+    console.error('Error getting quizzes:', error);
+    res.status(500).json({ error: 'Failed to get quizzes' });
+  }
+});
+
+/**
+ * POST /api/questions/next
+ * Get the next question to study based on spaced repetition or random shuffle
+ */
+router.post('/questions/next', async (req: Request, res: Response) => {
+  try {
+    // Get filters from request body
+    const { sections, quizzes, shuffleMode, onlyDue } = req.body;
+
+    const allQuestions = getAllQuestions(sections, quizzes);
 
     if (allQuestions.length === 0) {
       return res.status(404).json({ error: 'No questions available' });
     }
 
-    // Get all question stats from database
-    const statsResult = await pool.query(
-      'SELECT * FROM question_stats WHERE next_review <= NOW() ORDER BY next_review ASC LIMIT 1'
-    );
+    let nextQuestion: Question | null = null;
 
-    let nextQuestion: Question;
+    // Get IDs of filtered questions
+    const questionIds = allQuestions.map(q => q.id);
 
-    if (statsResult.rows.length > 0) {
-      // Found a question due for review
-      const stat = statsResult.rows[0];
-      nextQuestion = allQuestions.find((q) => q.id === stat.question_id)!;
+    // If shuffle mode is enabled, just pick a random question
+    if (shuffleMode) {
+      nextQuestion = allQuestions[Math.floor(Math.random() * allQuestions.length)];
     } else {
-      // No questions due, find one that hasn't been studied yet
-      const studiedIds = (await pool.query('SELECT question_id FROM question_stats')).rows.map(
-        (row) => row.question_id
+      // Use spaced repetition algorithm
+      // Get all question stats from database, filtered to only questions in the current selection
+      const statsResult = await pool.query(
+        'SELECT * FROM question_stats WHERE question_id = ANY($1) AND next_review <= NOW() ORDER BY next_review ASC LIMIT 1',
+        [questionIds]
       );
 
-      const unstudiedQuestions = allQuestions.filter(
-        (q) => !studiedIds.includes(q.id)
-      );
-
-      if (unstudiedQuestions.length > 0) {
-        // Pick a random unstudied question
-        nextQuestion = unstudiedQuestions[Math.floor(Math.random() * unstudiedQuestions.length)];
+      if (statsResult.rows.length > 0) {
+        // Found a question due for review
+        const stat = statsResult.rows[0];
+        nextQuestion = allQuestions.find((q) => q.id === stat.question_id)!;
       } else {
-        // All questions studied, get the one with earliest next_review
-        const earliestResult = await pool.query(
-          'SELECT question_id FROM question_stats ORDER BY next_review ASC LIMIT 1'
+        // No questions due, find one that hasn't been studied yet
+        const studiedIdsResult = await pool.query(
+          'SELECT question_id FROM question_stats WHERE question_id = ANY($1)',
+          [questionIds]
+        );
+        const studiedIds = studiedIdsResult.rows.map((row) => row.question_id);
+
+        const unstudiedQuestions = allQuestions.filter(
+          (q) => !studiedIds.includes(q.id)
         );
 
-        if (earliestResult.rows.length > 0) {
-          nextQuestion = allQuestions.find(
-            (q) => q.id === earliestResult.rows[0].question_id
-          )!;
-        } else {
-          // Fallback to random
-          nextQuestion = allQuestions[Math.floor(Math.random() * allQuestions.length)];
+        if (unstudiedQuestions.length > 0) {
+          // Pick a random unstudied question
+          nextQuestion = unstudiedQuestions[Math.floor(Math.random() * unstudiedQuestions.length)];
+        } else if (!onlyDue) {
+          // Only continue if not in "only due" mode
+          // All questions studied, get the one with earliest next_review
+          const earliestResult = await pool.query(
+            'SELECT question_id FROM question_stats WHERE question_id = ANY($1) ORDER BY next_review ASC LIMIT 1',
+            [questionIds]
+          );
+
+          if (earliestResult.rows.length > 0) {
+            nextQuestion = allQuestions.find(
+              (q) => q.id === earliestResult.rows[0].question_id
+            )!;
+          } else {
+            // Fallback to random
+            nextQuestion = allQuestions[Math.floor(Math.random() * allQuestions.length)];
+          }
         }
       }
+    }
+
+    if (!nextQuestion) {
+      return res.status(404).json({
+        error: 'No questions due',
+        message: 'Great work! No more questions are due for review today. Come back later!'
+      });
     }
 
     res.json(nextQuestion);
@@ -178,6 +245,31 @@ router.post('/answers', async (req: Request, res: Response) => {
       ]
     );
 
+    // Calculate strength level
+    let strengthLevel = 'New';
+    let strengthColor = '#9ca3af';
+
+    if (totalAttempts > 0) {
+      const accuracy = (correctAttempts / totalAttempts) * 100;
+
+      if (sm2Result.intervalDays >= 30 && sm2Result.easeFactor >= 2.5 && accuracy >= 80) {
+        strengthLevel = 'Mastered';
+        strengthColor = '#10b981';
+      } else if (sm2Result.intervalDays >= 7 && sm2Result.easeFactor >= 2.3 && accuracy >= 70) {
+        strengthLevel = 'Strong';
+        strengthColor = '#059669';
+      } else if (sm2Result.intervalDays >= 3 && accuracy >= 60) {
+        strengthLevel = 'Good';
+        strengthColor = '#3b82f6';
+      } else if (sm2Result.repetitions >= 1) {
+        strengthLevel = 'Learning';
+        strengthColor = '#f59e0b';
+      } else {
+        strengthLevel = 'Weak';
+        strengthColor = '#ef4444';
+      }
+    }
+
     res.json({
       success: true,
       nextReviewIn: sm2Result.intervalDays,
@@ -187,6 +279,13 @@ router.post('/answers', async (req: Request, res: Response) => {
         incorrectAttempts,
         accuracy: totalAttempts > 0 ? (correctAttempts / totalAttempts) * 100 : 0,
       },
+      strength: {
+        level: strengthLevel,
+        color: strengthColor,
+        easeFactor: sm2Result.easeFactor,
+        intervalDays: sm2Result.intervalDays,
+        repetitions: sm2Result.repetitions,
+      },
     });
   } catch (error) {
     console.error('Error submitting answer:', error);
@@ -195,34 +294,74 @@ router.post('/answers', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/stats
- * Get overall statistics
+ * POST /api/stats
+ * Get overall statistics with optional timeframe
  */
-router.get('/stats', async (req: Request, res: Response) => {
+router.post('/stats', async (req: Request, res: Response) => {
   try {
-    const totalQuestions = getAllQuestions().length;
+    // Get filters from request body
+    const { sections, quizzes, timeframeDays } = req.body;
 
-    const statsResult = await pool.query(`
-      SELECT
-        COUNT(*) as studied_count,
-        SUM(total_attempts) as total_attempts,
-        SUM(correct_attempts) as correct_attempts,
-        SUM(incorrect_attempts) as incorrect_attempts
-      FROM question_stats
-    `);
+    const allQuestions = getAllQuestions(sections, quizzes);
+    const totalQuestions = allQuestions.length;
+
+    // Get IDs of questions in the filtered set
+    const questionIds = allQuestions.map(q => q.id);
+
+    // Get all-time studied count from question_stats
+    let studiedCount = 0;
+    if (questionIds.length > 0) {
+      const studiedResult = await pool.query(
+        'SELECT COUNT(*) as count FROM question_stats WHERE question_id = ANY($1)',
+        [questionIds]
+      );
+      studiedCount = parseInt(studiedResult.rows[0].count) || 0;
+    }
+
+    // Get timeframe-based accuracy from response_history
+    let statsResult;
+    if (questionIds.length > 0 && timeframeDays && timeframeDays > 0) {
+      // Calculate date threshold
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - timeframeDays);
+
+      statsResult = await pool.query(`
+        SELECT
+          COUNT(*) as total_attempts,
+          SUM(CASE WHEN is_correct THEN 1 ELSE 0 END) as correct_attempts,
+          SUM(CASE WHEN NOT is_correct THEN 1 ELSE 0 END) as incorrect_attempts
+        FROM response_history
+        WHERE question_id = ANY($1) AND timestamp >= $2
+      `, [questionIds, cutoffDate]);
+    } else if (questionIds.length > 0) {
+      // No timeframe (0 or undefined), get all-time stats from question_stats
+      statsResult = await pool.query(`
+        SELECT
+          SUM(total_attempts) as total_attempts,
+          SUM(correct_attempts) as correct_attempts,
+          SUM(incorrect_attempts) as incorrect_attempts
+        FROM question_stats
+        WHERE question_id = ANY($1)
+      `, [questionIds]);
+    } else {
+      statsResult = { rows: [{ total_attempts: 0, correct_attempts: 0, incorrect_attempts: 0 }] };
+    }
 
     const stats = statsResult.rows[0];
+    const totalAttempts = parseInt(stats.total_attempts) || 0;
+    const correctAttempts = parseInt(stats.correct_attempts) || 0;
+    const incorrectAttempts = parseInt(stats.incorrect_attempts) || 0;
 
     res.json({
       totalQuestions,
-      studiedQuestions: parseInt(stats.studied_count) || 0,
-      unstudiedQuestions: totalQuestions - (parseInt(stats.studied_count) || 0),
-      totalAttempts: parseInt(stats.total_attempts) || 0,
-      correctAttempts: parseInt(stats.correct_attempts) || 0,
-      incorrectAttempts: parseInt(stats.incorrect_attempts) || 0,
+      studiedQuestions: studiedCount,
+      unstudiedQuestions: totalQuestions - studiedCount,
+      totalAttempts,
+      correctAttempts,
+      incorrectAttempts,
       overallAccuracy:
-        parseInt(stats.total_attempts) > 0
-          ? ((parseInt(stats.correct_attempts) || 0) / parseInt(stats.total_attempts)) * 100
+        totalAttempts > 0
+          ? (correctAttempts / totalAttempts) * 100
           : 0,
     });
   } catch (error) {
