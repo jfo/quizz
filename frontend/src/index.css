@@ -1,0 +1,247 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f5f7fa;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+#root {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.app {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 20px 30px;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.header p {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.stats-bar {
+  background: #f9fafb;
+  padding: 16px 30px;
+  display: flex;
+  justify-content: space-around;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.content {
+  padding: 32px 24px;
+  position: relative;
+}
+
+.question-card {
+  background: white;
+}
+
+.question-section {
+  margin-bottom: 32px;
+}
+
+.question-text {
+  font-size: 1.125rem;
+  margin-bottom: 8px;
+  line-height: 1.6;
+  color: #111827;
+  text-align: center;
+  font-weight: 500;
+}
+
+.question-meta {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.peek-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.125rem;
+  padding: 4px;
+  line-height: 1;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  user-select: none;
+}
+
+.peek-icon:hover {
+  transform: scale(1.2);
+}
+
+.peek-icon:active {
+  transform: scale(1.1);
+}
+
+.peek-icon-global {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0.25;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  z-index: 10;
+  font-size: 1.25rem;
+}
+
+.peek-icon-global:hover {
+  opacity: 0.8;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  margin-top: 24px;
+}
+
+.option-button {
+  width: 100%;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.option-button:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.option-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.option-button.correct {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+  cursor: pointer !important;
+}
+
+.option-button.correct:hover {
+  background: #d1fae5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+.option-button.incorrect {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.next-hint {
+  font-size: 0.8125rem;
+  font-style: italic;
+  opacity: 0.7;
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+.feedback {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.feedback.correct {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.feedback.incorrect {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.next-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 15px 40px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: transform 0.2s ease;
+}
+
+.next-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.loading {
+  text-align: center;
+  padding: 48px 20px;
+  font-size: 0.9375rem;
+  color: #9ca3af;
+}
+
+.error {
+  text-align: center;
+  padding: 48px 20px;
+  font-size: 0.9375rem;
+  color: #ef4444;
+}
