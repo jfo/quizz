@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes } from './api'
 
 function App() {
@@ -10,8 +10,6 @@ function App() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [startTime, setStartTime] = useState<number>(Date.now())
   const [showTranslations, setShowTranslations] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [isSettingsEntering, setIsSettingsEntering] = useState(false)
   const [selectedSections, setSelectedSections] = useState<string[]>([])
   const [availableSections, setAvailableSections] = useState<string[]>([])
   const [selectedQuizzes, setSelectedQuizzes] = useState<string[]>([])
@@ -23,6 +21,7 @@ function App() {
   const [questionStrength, setQuestionStrength] = useState<{ level: string; color: string; intervalDays: number } | null>(null)
   const [timeframeDays, setTimeframeDays] = useState(7)
   const [onlyDueMode, setOnlyDueMode] = useState(true)
+  const [exploratoryMode, setExploratoryMode] = useState(false)
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -130,6 +129,11 @@ function App() {
       if (savedOnlyDueMode !== null) {
         setOnlyDueMode(savedOnlyDueMode === 'true')
       }
+
+      const savedExploratoryMode = localStorage.getItem('exploratoryMode')
+      if (savedExploratoryMode !== null) {
+        setExploratoryMode(savedExploratoryMode === 'true')
+      }
     } catch (err) {
       console.error('Failed to load sections:', err)
     }
@@ -145,7 +149,7 @@ function App() {
       loadQuestion()
       loadStats()
     }
-  }, [selectedSections, selectedQuizzes, shuffleMode, timeframeDays, onlyDueMode])
+  }, [selectedSections, selectedQuizzes, shuffleMode, timeframeDays, onlyDueMode, exploratoryMode])
 
   const handleOptionClick = async (index: number) => {
     if (!question) return
@@ -171,17 +175,20 @@ function App() {
       total: prev.total + 1
     }))
 
-    try {
-      const response = await submitAnswer(
-        question.id,
-        isCorrect,
-        shuffledOptions[index].text,
-        responseTimeMs
-      )
-      setQuestionStrength(response.strength)
-      await loadStats()
-    } catch (err) {
-      console.error('Failed to submit answer:', err)
+    // Only track answers if not in exploratory mode
+    if (!exploratoryMode) {
+      try {
+        const response = await submitAnswer(
+          question.id,
+          isCorrect,
+          shuffledOptions[index].text,
+          responseTimeMs
+        )
+        setQuestionStrength(response.strength)
+        await loadStats()
+      } catch (err) {
+        console.error('Failed to submit answer:', err)
+      }
     }
   }
 
@@ -254,390 +261,296 @@ function App() {
     })
   }
 
-  const openSettings = () => {
-    setShowSettings(true)
-    setIsSettingsEntering(true)
-    setTimeout(() => setIsSettingsEntering(false), 300)
+  const toggleExploratoryMode = () => {
+    setExploratoryMode(prev => {
+      const newValue = !prev
+      localStorage.setItem('exploratoryMode', String(newValue))
+      return newValue
+    })
   }
 
-  const closeSettings = () => {
-    setShowSettings(false)
-    setIsSettingsEntering(false)
-  }
-
-  if (loading) {
-    return (
-      <div className="app">
-        <div className="header">
-          <h1>Quiz</h1>
-        </div>
-        <div className="loading">Loading question...</div>
+  const renderSettingsPanel = () => (
+    <div className="settings-panel">
+      <div className="settings-header">
+        <h2>Settings</h2>
       </div>
-    )
-  }
+      <div className="settings-content">
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Study Mode</h3>
+          </div>
+          <label className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={exploratoryMode}
+              onChange={toggleExploratoryMode}
+            />
+            <span>Exploratory mode (answers not tracked)</span>
+          </label>
+          {exploratoryMode && (
+            <div style={{ fontSize: '0.8125rem', color: '#f59e0b', marginTop: '8px', paddingLeft: '38px' }}>
+              Practice mode - your progress won't be saved
+            </div>
+          )}
+        </div>
 
-  if (error || !question) {
-    return (
-      <>
-        {showSettings && (
-          <>
-            <div className="settings-overlay" onClick={closeSettings} />
-            <div className={`settings-panel ${isSettingsEntering ? 'entering' : ''}`}>
-              <div className="settings-header">
-                <h2>Filter Questions</h2>
-                <button className="close-button" onClick={closeSettings}>✕</button>
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Question Order</h3>
+          </div>
+          <label className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={shuffleMode}
+              onChange={toggleShuffleMode}
+              disabled={!exploratoryMode && onlyDueMode}
+            />
+            <span>Shuffle questions (random order)</span>
+          </label>
+          {!shuffleMode && !exploratoryMode && (
+            <>
+              <label className="checkbox-item" style={{ marginTop: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={onlyDueMode}
+                  onChange={toggleOnlyDueMode}
+                />
+                <span>Only show questions due for review today</span>
+              </label>
+              <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+                Using spaced repetition algorithm
               </div>
-              <div className="settings-content">
-                <div className="settings-section">
-                  <div className="settings-section-header">
-                    <h3>Question Order</h3>
+            </>
+          )}
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
+            <div className="settings-actions">
+              <button onClick={selectAllQuizzes} className="text-button">All</button>
+              <button onClick={deselectAllQuizzes} className="text-button">None</button>
+            </div>
+          </div>
+          <div className="quiz-tree">
+            {quizzesBySection.map(sectionData => {
+              const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
+              const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
+              const totalCount = sectionQuizUrls.length
+              const allSelected = selectedCount === totalCount
+              const someSelected = selectedCount > 0 && selectedCount < totalCount
+              const isExpanded = expandedSections.has(sectionData.section)
+
+              return (
+                <div key={sectionData.section} className="section-group">
+                  <div className="section-header-row">
+                    <button
+                      className="expand-button"
+                      onClick={() => toggleSectionExpanded(sectionData.section)}
+                    >
+                      {isExpanded ? '▼' : '▶'}
+                    </button>
+                    <label className="section-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={input => {
+                          if (input) input.indeterminate = someSelected
+                        }}
+                        onChange={() => toggleSection(sectionData.section)}
+                      />
+                      <span className="section-name">
+                        {sectionData.section} ({selectedCount}/{totalCount})
+                      </span>
+                    </label>
                   </div>
-                  <label className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={shuffleMode}
-                      onChange={toggleShuffleMode}
-                    />
-                    <span>Shuffle questions (random order)</span>
-                  </label>
-                  {!shuffleMode && (
-                    <>
-                      <label className="checkbox-item" style={{ marginTop: '8px' }}>
-                        <input
-                          type="checkbox"
-                          checked={onlyDueMode}
-                          onChange={toggleOnlyDueMode}
-                        />
-                        <span>Only show questions due for review today</span>
-                      </label>
-                      <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
-                        Using spaced repetition algorithm
-                      </div>
-                    </>
+                  {isExpanded && (
+                    <div className="quiz-list">
+                      {sectionData.quizzes.map(quiz => (
+                        <label key={quiz.url} className="quiz-item">
+                          <input
+                            type="checkbox"
+                            checked={selectedQuizzes.includes(quiz.url)}
+                            onChange={() => toggleQuiz(quiz.url)}
+                          />
+                          <span className="quiz-title">{quiz.title}</span>
+                          <span className="quiz-count">({quiz.questionCount})</span>
+                        </label>
+                      ))}
+                    </div>
                   )}
                 </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
-                <div className="settings-section">
-                  <div className="settings-section-header">
-                    <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
-                    <div className="settings-actions">
-                      <button onClick={selectAllQuizzes} className="text-button">All</button>
-                      <button onClick={deselectAllQuizzes} className="text-button">None</button>
-                    </div>
-                  </div>
-                  <div className="quiz-tree">
-                    {quizzesBySection.map(sectionData => {
-                      const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
-                      const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
-                      const totalCount = sectionQuizUrls.length
-                      const allSelected = selectedCount === totalCount
-                      const someSelected = selectedCount > 0 && selectedCount < totalCount
-                      const isExpanded = expandedSections.has(sectionData.section)
+  const renderMainContent = () => {
+    if (loading) {
+      return (
+        <div className="loading">Loading question...</div>
+      )
+    }
 
-                      return (
-                        <div key={sectionData.section} className="section-group">
-                          <div className="section-header-row">
-                            <button
-                              className="expand-button"
-                              onClick={() => toggleSectionExpanded(sectionData.section)}
-                            >
-                              {isExpanded ? '▼' : '▶'}
-                            </button>
-                            <label className="section-checkbox">
-                              <input
-                                type="checkbox"
-                                checked={allSelected}
-                                ref={input => {
-                                  if (input) input.indeterminate = someSelected
-                                }}
-                                onChange={() => toggleSection(sectionData.section)}
-                              />
-                              <span className="section-name">
-                                {sectionData.section} ({selectedCount}/{totalCount})
-                              </span>
-                            </label>
-                          </div>
-                          {isExpanded && (
-                            <div className="quiz-list">
-                              {sectionData.quizzes.map(quiz => (
-                                <label key={quiz.url} className="quiz-item">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedQuizzes.includes(quiz.url)}
-                                    onChange={() => toggleQuiz(quiz.url)}
-                                  />
-                                  <span className="quiz-title">{quiz.title}</span>
-                                  <span className="quiz-count">({quiz.questionCount})</span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+    if (error || !question) {
+      return (
+        <div className={error ? "error" : "loading"}>
+          {error || (selectedQuizzes.length === 0
+            ? 'No quizzes selected. Select quizzes from the settings.'
+            : 'No question available')}
+        </div>
+      )
+    }
+
+    const correctOptionIndex = shuffledOptions.findIndex(opt => opt.correct)
+
+    return (
+      <>
+        {stats && (
+          <div className="stats-bar">
+            <div className="stat">
+              <div className="stat-value">{stats.studiedQuestions}/{stats.totalQuestions}</div>
+              <div className="stat-label">Studied</div>
+            </div>
+            <div className="stat">
+              <div className="stat-value">{stats.overallAccuracy.toFixed(1)}%</div>
+              <div className="stat-label">
+                <select
+                  value={timeframeDays}
+                  onChange={(e) => setTimeframeDays(Number(e.target.value))}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '0.75rem',
+                    color: '#9ca3af',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="1">Today</option>
+                  <option value="7">Past Week</option>
+                  <option value="30">Past Month</option>
+                  <option value="90">Past 3 Months</option>
+                  <option value="0">All Time</option>
+                </select>
               </div>
             </div>
-          </>
+            <div className="stat">
+              <div className="stat-value">
+                {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%
+              </div>
+              <div className="stat-label">Session ({sessionStats.total})</div>
+            </div>
+          </div>
         )}
 
-        <div className="app">
-          <div className="header">
-            <h1>Quiz</h1>
-            <button
-              className="settings-button"
-              onClick={openSettings}
-              title="Filter questions"
-            >
-              ⚙️
-            </button>
-          </div>
-          <div className={error ? "error" : "loading"}>
-            {error || (selectedQuizzes.length === 0
-              ? 'No quizzes selected. Click the ⚙️ to select quizzes.'
-              : 'No question available')}
+        <div className="content">
+          <div className="question-card">
+            {question.metadata && (
+              <div className="question-meta">{question.metadata}</div>
+            )}
+
+            {(question.questionEn || question.options.some(opt => opt.textEn)) && (
+              <button
+                className="peek-icon peek-icon-global"
+                onMouseDown={() => setShowTranslations(true)}
+                onMouseUp={() => setShowTranslations(false)}
+                onMouseLeave={() => setShowTranslations(false)}
+                onTouchStart={() => setShowTranslations(true)}
+                onTouchEnd={() => setShowTranslations(false)}
+                title="Hold to see translations"
+              >
+                {showTranslations ? '👁️' : '👁️‍🗨️'}
+              </button>
+            )}
+
+            <div className="question-section">
+              <div className="question-text">
+                {showTranslations && question.questionEn ? question.questionEn : question.question}
+              </div>
+            </div>
+
+            <div className="options">
+              {shuffledOptions.map((option, index) => {
+                let className = 'option-button'
+
+                if (answered) {
+                  if (index === correctOptionIndex) {
+                    className += ' correct'
+                  } else if (index === selectedOption) {
+                    className += ' incorrect'
+                  }
+                }
+
+                const isCorrect = option.correct
+                const canAdvance = answered && isCorrect
+
+                return (
+                  <button
+                    key={index}
+                    className={className}
+                    onClick={() => handleOptionClick(index)}
+                    style={canAdvance ? { cursor: 'pointer' } : undefined}
+                  >
+                    {showTranslations && option.textEn ? option.textEn : option.text}
+                    {canAdvance && <span className="next-hint"> → Click to continue</span>}
+                  </button>
+                )
+              })}
+            </div>
+
+            {answered && (
+              <div className={`feedback ${selectedOption === correctOptionIndex ? 'correct' : 'incorrect'}`}>
+                {selectedOption === correctOptionIndex ? (
+                  <strong>Correct! Click the answer again to continue.</strong>
+                ) : (
+                  <strong>Incorrect. Click the correct answer to continue.</strong>
+                )}
+                {questionStrength && !exploratoryMode && (
+                  <div className="strength-indicator" style={{ marginTop: '12px', fontSize: '0.875rem' }}>
+                    <span style={{ color: questionStrength.color, fontWeight: '600' }}>
+                      {questionStrength.level}
+                    </span>
+                    {' • '}
+                    Next review in {questionStrength.intervalDays} day{questionStrength.intervalDays !== 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </>
     )
   }
 
-  const correctOptionIndex = shuffledOptions.findIndex(opt => opt.correct)
-
   return (
     <>
-      {showSettings && (
-        <>
-          <div className="settings-overlay" onClick={closeSettings} />
-          <div className={`settings-panel ${isSettingsEntering ? 'entering' : ''}`}>
-            <div className="settings-header">
-              <h2>Filter Questions</h2>
-              <button className="close-button" onClick={closeSettings}>✕</button>
-            </div>
-            <div className="settings-content">
-              <div className="settings-section">
-                <div className="settings-section-header">
-                  <h3>Question Order</h3>
-                </div>
-                <label className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={shuffleMode}
-                    onChange={toggleShuffleMode}
-                  />
-                  <span>Shuffle questions (random order)</span>
-                </label>
-                {!shuffleMode && (
-                  <>
-                    <label className="checkbox-item" style={{ marginTop: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={onlyDueMode}
-                        onChange={toggleOnlyDueMode}
-                      />
-                      <span>Only show questions due for review today</span>
-                    </label>
-                    <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
-                      Using spaced repetition algorithm
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="settings-section">
-                <div className="settings-section-header">
-                  <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
-                  <div className="settings-actions">
-                    <button onClick={selectAllQuizzes} className="text-button">All</button>
-                    <button onClick={deselectAllQuizzes} className="text-button">None</button>
-                  </div>
-                </div>
-                <div className="quiz-tree">
-                  {quizzesBySection.map(sectionData => {
-                    const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
-                    const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
-                    const totalCount = sectionQuizUrls.length
-                    const allSelected = selectedCount === totalCount
-                    const someSelected = selectedCount > 0 && selectedCount < totalCount
-                    const isExpanded = expandedSections.has(sectionData.section)
-
-                    return (
-                      <div key={sectionData.section} className="section-group">
-                        <div className="section-header-row">
-                          <button
-                            className="expand-button"
-                            onClick={() => toggleSectionExpanded(sectionData.section)}
-                          >
-                            {isExpanded ? '▼' : '▶'}
-                          </button>
-                          <label className="section-checkbox">
-                            <input
-                              type="checkbox"
-                              checked={allSelected}
-                              ref={input => {
-                                if (input) input.indeterminate = someSelected
-                              }}
-                              onChange={() => toggleSection(sectionData.section)}
-                            />
-                            <span className="section-name">
-                              {sectionData.section} ({selectedCount}/{totalCount})
-                            </span>
-                          </label>
-                        </div>
-                        {isExpanded && (
-                          <div className="quiz-list">
-                            {sectionData.quizzes.map(quiz => (
-                              <label key={quiz.url} className="quiz-item">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedQuizzes.includes(quiz.url)}
-                                  onChange={() => toggleQuiz(quiz.url)}
-                                />
-                                <span className="quiz-title">{quiz.title}</span>
-                                <span className="quiz-count">({quiz.questionCount})</span>
-                              </label>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
+      {renderSettingsPanel()}
       <div className="app">
         <div className="header">
-          <h1>Quiz</h1>
-          <button
-            className="settings-button"
-            onClick={openSettings}
-            title="Filter questions"
-          >
-            ⚙️
-          </button>
+          <h1>
+            Quiz
+            {exploratoryMode && (
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: '400',
+                color: '#f59e0b',
+                marginLeft: '12px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                Exploratory Mode
+              </span>
+            )}
+          </h1>
         </div>
-
-      {stats && (
-        <div className="stats-bar">
-          <div className="stat">
-            <div className="stat-value">{stats.studiedQuestions}/{stats.totalQuestions}</div>
-            <div className="stat-label">Studied</div>
-          </div>
-          <div className="stat">
-            <div className="stat-value">{stats.overallAccuracy.toFixed(1)}%</div>
-            <div className="stat-label">
-              <select
-                value={timeframeDays}
-                onChange={(e) => setTimeframeDays(Number(e.target.value))}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '0.75rem',
-                  color: '#9ca3af',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option value="1">Today</option>
-                <option value="7">Past Week</option>
-                <option value="30">Past Month</option>
-                <option value="90">Past 3 Months</option>
-                <option value="0">All Time</option>
-              </select>
-            </div>
-          </div>
-          <div className="stat">
-            <div className="stat-value">
-              {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%
-            </div>
-            <div className="stat-label">Session ({sessionStats.total})</div>
-          </div>
-        </div>
-      )}
-
-      <div className="content">
-        <div className="question-card">
-          {question.metadata && (
-            <div className="question-meta">{question.metadata}</div>
-          )}
-
-          {(question.questionEn || question.options.some(opt => opt.textEn)) && (
-            <button
-              className="peek-icon peek-icon-global"
-              onMouseDown={() => setShowTranslations(true)}
-              onMouseUp={() => setShowTranslations(false)}
-              onMouseLeave={() => setShowTranslations(false)}
-              onTouchStart={() => setShowTranslations(true)}
-              onTouchEnd={() => setShowTranslations(false)}
-              title="Hold to see translations"
-            >
-              {showTranslations ? '👁️' : '👁️‍🗨️'}
-            </button>
-          )}
-
-          <div className="question-section">
-            <div className="question-text">
-              {showTranslations && question.questionEn ? question.questionEn : question.question}
-            </div>
-          </div>
-
-          <div className="options">
-            {shuffledOptions.map((option, index) => {
-              let className = 'option-button'
-
-              if (answered) {
-                if (index === correctOptionIndex) {
-                  className += ' correct'
-                } else if (index === selectedOption) {
-                  className += ' incorrect'
-                }
-              }
-
-              const isCorrect = option.correct
-              const canAdvance = answered && isCorrect
-
-              return (
-                <button
-                  key={index}
-                  className={className}
-                  onClick={() => handleOptionClick(index)}
-                  style={canAdvance ? { cursor: 'pointer' } : undefined}
-                >
-                  {showTranslations && option.textEn ? option.textEn : option.text}
-                  {canAdvance && <span className="next-hint"> → Click to continue</span>}
-                </button>
-              )
-            })}
-          </div>
-
-          {answered && (
-            <div className={`feedback ${selectedOption === correctOptionIndex ? 'correct' : 'incorrect'}`}>
-              {selectedOption === correctOptionIndex ? (
-                <strong>Correct! Click the answer again to continue.</strong>
-              ) : (
-                <strong>Incorrect. Click the correct answer to continue.</strong>
-              )}
-              {questionStrength && (
-                <div className="strength-indicator" style={{ marginTop: '12px', fontSize: '0.875rem' }}>
-                  <span style={{ color: questionStrength.color, fontWeight: '600' }}>
-                    {questionStrength.level}
-                  </span>
-                  {' • '}
-                  Next review in {questionStrength.intervalDays} day{questionStrength.intervalDays !== 1 ? 's' : ''}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {renderMainContent()}
       </div>
-    </div>
     </>
   )
 }
