@@ -25,6 +25,8 @@ function App() {
   const [useBackendStats, setUseBackendStats] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
+  const [showChapters, setShowChapters] = useState(true)
+  const [showOtherTopics, setShowOtherTopics] = useState(false)
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -396,55 +398,163 @@ function App() {
             </div>
           </div>
           <div className="quiz-tree">
-            {quizzesBySection.map(sectionData => {
-              const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
-              const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
-              const totalCount = sectionQuizUrls.length
-              const allSelected = selectedCount === totalCount
-              const someSelected = selectedCount > 0 && selectedCount < totalCount
-              const isExpanded = expandedSections.has(sectionData.section)
+            {/* Group 1: Chapters */}
+            <div style={{ marginBottom: '16px' }}>
+              <button
+                onClick={() => setShowChapters(!showChapters)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginBottom: '8px',
+                  paddingLeft: '0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  width: '100%',
+                  textAlign: 'left'
+                }}
+              >
+                <span style={{ fontSize: '0.65rem' }}>{showChapters ? '▼' : '▶'}</span>
+                <span>Book Chapters</span>
+              </button>
+              {showChapters && quizzesBySection
+                .filter(sectionData => sectionData.section.toLowerCase().includes('kapitel'))
+                .sort((a, b) => a.section.localeCompare(b.section, 'da'))
+                .map(sectionData => {
+                  const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
+                  const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
+                  const totalCount = sectionQuizUrls.length
+                  const allSelected = selectedCount === totalCount
+                  const someSelected = selectedCount > 0 && selectedCount < totalCount
+                  const isExpanded = expandedSections.has(sectionData.section)
 
-              return (
-                <div key={sectionData.section} className="section-group">
-                  <div className="section-header-row">
-                    <button
-                      className="expand-button"
-                      onClick={() => toggleSectionExpanded(sectionData.section)}
-                    >
-                      {isExpanded ? '▼' : '▶'}
-                    </button>
-                    <label className="section-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        ref={input => {
-                          if (input) input.indeterminate = someSelected
-                        }}
-                        onChange={() => toggleSection(sectionData.section)}
-                      />
-                      <span className="section-name">
-                        {sectionData.section} ({selectedCount}/{totalCount})
-                      </span>
-                    </label>
-                  </div>
-                  {isExpanded && (
-                    <div className="quiz-list">
-                      {sectionData.quizzes.map(quiz => (
-                        <label key={quiz.url} className="quiz-item">
+                  return (
+                    <div key={sectionData.section} className="section-group" style={{ marginBottom: '4px' }}>
+                      <div className="section-header-row">
+                        <button
+                          className="expand-button"
+                          onClick={() => toggleSectionExpanded(sectionData.section)}
+                        >
+                          {isExpanded ? '▼' : '▶'}
+                        </button>
+                        <label className="section-checkbox">
                           <input
                             type="checkbox"
-                            checked={selectedQuizzes.includes(quiz.url)}
-                            onChange={() => toggleQuiz(quiz.url)}
+                            checked={allSelected}
+                            ref={input => {
+                              if (input) input.indeterminate = someSelected
+                            }}
+                            onChange={() => toggleSection(sectionData.section)}
                           />
-                          <span className="quiz-title">{quiz.title}</span>
-                          <span className="quiz-count">({quiz.questionCount})</span>
+                          <span className="section-name">
+                            {sectionData.section} ({selectedCount}/{totalCount})
+                          </span>
                         </label>
-                      ))}
+                      </div>
+                      {isExpanded && (
+                        <div className="quiz-list">
+                          {sectionData.quizzes.map(quiz => (
+                            <label key={quiz.url} className="quiz-item">
+                              <input
+                                type="checkbox"
+                                checked={selectedQuizzes.includes(quiz.url)}
+                                onChange={() => toggleQuiz(quiz.url)}
+                              />
+                              <span className="quiz-title">{quiz.title}</span>
+                              <span className="quiz-count">({quiz.questionCount})</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )
-            })}
+                  )
+                })}
+            </div>
+
+            {/* Group 2: Everything Else */}
+            <div>
+              <button
+                onClick={() => setShowOtherTopics(!showOtherTopics)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginBottom: '8px',
+                  paddingLeft: '0',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  width: '100%',
+                  textAlign: 'left'
+                }}
+              >
+                <span style={{ fontSize: '0.65rem' }}>{showOtherTopics ? '▼' : '▶'}</span>
+                <span>Other Topics</span>
+              </button>
+              {showOtherTopics && quizzesBySection
+                .filter(sectionData => !sectionData.section.toLowerCase().includes('kapitel'))
+                .sort((a, b) => a.section.localeCompare(b.section, 'da'))
+                .map(sectionData => {
+                  const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
+                  const selectedCount = sectionQuizUrls.filter(url => selectedQuizzes.includes(url)).length
+                  const totalCount = sectionQuizUrls.length
+                  const allSelected = selectedCount === totalCount
+                  const someSelected = selectedCount > 0 && selectedCount < totalCount
+                  const isExpanded = expandedSections.has(sectionData.section)
+
+                  return (
+                    <div key={sectionData.section} className="section-group" style={{ marginBottom: '4px' }}>
+                      <div className="section-header-row">
+                        <button
+                          className="expand-button"
+                          onClick={() => toggleSectionExpanded(sectionData.section)}
+                        >
+                          {isExpanded ? '▼' : '▶'}
+                        </button>
+                        <label className="section-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={input => {
+                              if (input) input.indeterminate = someSelected
+                            }}
+                            onChange={() => toggleSection(sectionData.section)}
+                          />
+                          <span className="section-name">
+                            {sectionData.section} ({selectedCount}/{totalCount})
+                          </span>
+                        </label>
+                      </div>
+                      {isExpanded && (
+                        <div className="quiz-list">
+                          {sectionData.quizzes.map(quiz => (
+                            <label key={quiz.url} className="quiz-item">
+                              <input
+                                type="checkbox"
+                                checked={selectedQuizzes.includes(quiz.url)}
+                                onChange={() => toggleQuiz(quiz.url)}
+                              />
+                              <span className="quiz-title">{quiz.title}</span>
+                              <span className="quiz-count">({quiz.questionCount})</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+            </div>
           </div>
         </div>
 
