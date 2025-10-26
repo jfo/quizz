@@ -11,6 +11,8 @@ export interface Question {
   question: string;
   questionEn?: string;
   metadata?: string;
+  section?: string;
+  quiz?: string;
   options: QuestionOption[];
 }
 

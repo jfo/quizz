@@ -27,6 +27,7 @@ function App() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const [showChapters, setShowChapters] = useState(true)
   const [showOtherTopics, setShowOtherTopics] = useState(false)
+  const [questionSection, setQuestionSection] = useState<string>('')
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -303,6 +304,16 @@ function App() {
     })
   }
 
+  const jumpToSection = async (section: string) => {
+    // Select only quizzes from this section
+    const sectionData = quizzesBySection.find(s => s.section === section)
+    if (!sectionData) return
+
+    const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
+    setSelectedQuizzes(sectionQuizUrls)
+    localStorage.setItem('selectedQuizzes', JSON.stringify(sectionQuizUrls))
+  }
+
   const toggleBackendStats = async () => {
     try {
       const newValue = !useBackendStats
@@ -389,6 +400,25 @@ function App() {
           </div>
         )}
 
+        {!useBackendStats && (
+          <div className="settings-section">
+            <div className="settings-section-header">
+              <h3>Question Order</h3>
+            </div>
+            <label className="checkbox-item">
+              <input
+                type="checkbox"
+                checked={shuffleMode}
+                onChange={toggleShuffleMode}
+              />
+              <span>Shuffle questions</span>
+            </label>
+            <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+              {shuffleMode ? 'Questions in random order' : 'Questions in sequential order'}
+            </div>
+          </div>
+        )}
+
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
@@ -443,19 +473,22 @@ function App() {
                         >
                           {isExpanded ? '▼' : '▶'}
                         </button>
-                        <label className="section-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={allSelected}
-                            ref={input => {
-                              if (input) input.indeterminate = someSelected
-                            }}
-                            onChange={() => toggleSection(sectionData.section)}
-                          />
-                          <span className="section-name">
-                            {sectionData.section} ({selectedCount}/{totalCount})
-                          </span>
-                        </label>
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          ref={input => {
+                            if (input) input.indeterminate = someSelected
+                          }}
+                          onChange={() => toggleSection(sectionData.section)}
+                          style={{ cursor: 'pointer', accentColor: '#a31537' }}
+                        />
+                        <span
+                          className="section-name"
+                          onClick={() => jumpToSection(sectionData.section)}
+                          style={{ cursor: 'pointer', flex: 1 }}
+                        >
+                          {sectionData.section} ({selectedCount}/{totalCount})
+                        </span>
                       </div>
                       {isExpanded && (
                         <div className="quiz-list">
@@ -522,19 +555,22 @@ function App() {
                         >
                           {isExpanded ? '▼' : '▶'}
                         </button>
-                        <label className="section-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={allSelected}
-                            ref={input => {
-                              if (input) input.indeterminate = someSelected
-                            }}
-                            onChange={() => toggleSection(sectionData.section)}
-                          />
-                          <span className="section-name">
-                            {sectionData.section} ({selectedCount}/{totalCount})
-                          </span>
-                        </label>
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          ref={input => {
+                            if (input) input.indeterminate = someSelected
+                          }}
+                          onChange={() => toggleSection(sectionData.section)}
+                          style={{ cursor: 'pointer', accentColor: '#a31537' }}
+                        />
+                        <span
+                          className="section-name"
+                          onClick={() => jumpToSection(sectionData.section)}
+                          style={{ cursor: 'pointer', flex: 1 }}
+                        >
+                          {sectionData.section} ({selectedCount}/{totalCount})
+                        </span>
                       </div>
                       {isExpanded && (
                         <div className="quiz-list">
@@ -713,6 +749,17 @@ function App() {
               <div className="question-text">
                 {showTranslations && question.questionEn ? question.questionEn : question.question}
               </div>
+              {showTranslations && question.section && (
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: '#6b7280',
+                  textAlign: 'center',
+                  marginTop: '8px',
+                  fontStyle: 'italic'
+                }}>
+                  {question.section}{question.quiz && ` • ${question.quiz}`}
+                </div>
+              )}
             </div>
 
             <div className="options">

@@ -121,6 +121,8 @@ export class BackendQuestionManager implements IQuestionManager {
 // Frontend implementation (loads questions locally, no stats)
 export class LocalQuestionManager implements IQuestionManager {
   private questionsData: Section[] = [];
+  private currentQuestionIndex: number = 0;
+  private currentQuestionList: Question[] = [];
 
   async initialize(): Promise<void> {
     // Fetch questions.json from public folder
@@ -159,23 +161,52 @@ export class LocalQuestionManager implements IQuestionManager {
         if (quizFilter && quizFilter.length > 0 && !quizFilter.includes(quiz.url)) {
           continue;
         }
-        allQuestions.push(...quiz.questions);
+        // Add section and quiz metadata to each question
+        const questionsWithMetadata = quiz.questions.map(q => ({
+          ...q,
+          section: section.section,
+          quiz: quiz.title
+        }));
+        allQuestions.push(...questionsWithMetadata);
       }
     }
     return allQuestions;
   }
 
-  async getNextQuestion(sections?: string[], quizzes?: string[], _shuffleMode?: boolean, _onlyDue?: boolean): Promise<Question> {
+  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, _onlyDue?: boolean): Promise<Question> {
     const allQuestions = this.getAllQuestions(sections, quizzes);
 
     if (allQuestions.length === 0) {
       throw new Error('No questions available');
     }
 
-    // In frontend-only mode, we always shuffle (simple mode)
-    // Pick a random question
-    const randomIndex = Math.floor(Math.random() * allQuestions.length);
-    return allQuestions[randomIndex];
+    // Check if we need to rebuild the question list (selections changed)
+    const needsRebuild = this.currentQuestionList.length === 0 ||
+                         this.currentQuestionList.length !== allQuestions.length;
+
+    if (needsRebuild) {
+      this.currentQuestionList = shuffleMode ?
+        this.shuffleArray([...allQuestions]) :
+        [...allQuestions];
+      this.currentQuestionIndex = 0;
+    }
+
+    // Get current question
+    const question = this.currentQuestionList[this.currentQuestionIndex];
+
+    // Advance to next question
+    this.currentQuestionIndex = (this.currentQuestionIndex + 1) % this.currentQuestionList.length;
+
+    return question;
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
   }
 
   async submitAnswer(
