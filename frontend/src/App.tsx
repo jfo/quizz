@@ -448,49 +448,51 @@ function App() {
           </div>
         </div>
 
-        <div className="settings-section" style={{ borderTop: '1px solid #374151', paddingTop: '16px', marginTop: '16px' }}>
-          <button
-            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#9ca3af',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '0',
-              width: '100%',
-              textAlign: 'left'
-            }}
-          >
-            <span>{showAdvancedSettings ? '▼' : '▶'}</span>
-            <span>Advanced Settings</span>
-          </button>
+        {import.meta.env.DEV && (
+          <div className="settings-section" style={{ borderTop: '1px solid #374151', paddingTop: '16px', marginTop: '16px' }}>
+            <button
+              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#9ca3af',
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '0',
+                width: '100%',
+                textAlign: 'left'
+              }}
+            >
+              <span>{showAdvancedSettings ? '▼' : '▶'}</span>
+              <span>Advanced Settings</span>
+            </button>
 
-          {showAdvancedSettings && (
-            <div style={{ marginTop: '12px' }}>
-              <label className="checkbox-item">
-                <input
-                  type="checkbox"
-                  checked={useBackendStats}
-                  onChange={toggleBackendStats}
-                />
-                <span>Use backend for stats & spaced repetition</span>
-              </label>
-              {useBackendStats ? (
-                <div style={{ fontSize: '0.8125rem', color: '#3b82f6', marginTop: '8px', paddingLeft: '38px' }}>
-                  Full mode - tracks progress with spaced repetition
-                </div>
-              ) : (
-                <div style={{ fontSize: '0.8125rem', color: '#10b981', marginTop: '8px', paddingLeft: '38px' }}>
-                  Simple mode - all questions loaded locally, no tracking
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            {showAdvancedSettings && (
+              <div style={{ marginTop: '12px' }}>
+                <label className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={useBackendStats}
+                    onChange={toggleBackendStats}
+                  />
+                  <span>Use backend for stats & spaced repetition</span>
+                </label>
+                {useBackendStats ? (
+                  <div style={{ fontSize: '0.8125rem', color: '#3b82f6', marginTop: '8px', paddingLeft: '38px' }}>
+                    Full mode - tracks progress with spaced repetition
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.8125rem', color: '#10b981', marginTop: '8px', paddingLeft: '38px' }}>
+                    Simple mode - all questions loaded locally, no tracking
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
