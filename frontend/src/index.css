@@ -466,3 +466,137 @@ body {
   font-size: 0.75rem;
   color: #9ca3af;
 }
+
+/* Responsive Mobile Styles */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  #root {
+    flex-direction: column-reverse;
+    gap: 12px;
+    min-height: calc(100vh - 20px);
+  }
+
+  .settings-panel {
+    width: 100%;
+    max-height: none;
+  }
+
+  .app {
+    border-radius: 8px;
+  }
+
+  .header {
+    padding: 14px 16px;
+  }
+
+  .header h1 {
+    font-size: 0.875rem;
+  }
+
+  .stats-bar {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+  }
+
+  .content {
+    padding: 16px 12px;
+  }
+
+  .question-text {
+    font-size: 0.9375rem;
+  }
+
+  .option-button {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+  }
+
+  .settings-content {
+    max-height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 5px;
+  }
+
+  #root {
+    gap: 8px;
+    min-height: calc(100vh - 10px);
+  }
+
+  .header {
+    padding: 12px 14px;
+  }
+
+  .header h1 {
+    font-size: 0.8125rem;
+  }
+
+  .stats-bar {
+    padding: 8px 12px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.625rem;
+  }
+
+  .content {
+    padding: 12px 10px;
+  }
+
+  .question-text {
+    font-size: 0.875rem;
+  }
+
+  .question-meta {
+    font-size: 0.625rem;
+  }
+
+  .option-button {
+    padding: 9px 10px;
+    font-size: 0.8125rem;
+  }
+
+  .feedback {
+    padding: 12px 14px;
+    font-size: 0.8125rem;
+  }
+
+  .settings-header {
+    padding: 16px;
+  }
+
+  .settings-header h2 {
+    font-size: 0.8125rem;
+  }
+
+  .settings-content {
+    padding: 12px;
+    max-height: 300px;
+  }
+
+  .settings-section-header h3 {
+    font-size: 0.8125rem;
+  }
+
+  .checkbox-item span {
+    font-size: 0.8125rem;
+  }
+
+  .section-name {
+    font-size: 0.8125rem;
+  }
+
+  .quiz-title {
+    font-size: 0.75rem;
+  }
+}
