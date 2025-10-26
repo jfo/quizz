@@ -124,7 +124,8 @@ export class LocalQuestionManager implements IQuestionManager {
 
   async initialize(): Promise<void> {
     // Fetch questions.json from public folder
-    const response = await fetch('/questions.json');
+    // Use relative path to work with GitHub Pages base path
+    const response = await fetch('./questions.json');
     if (!response.ok) {
       throw new Error('Failed to load questions.json');
     }

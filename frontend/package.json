@@ -4,8 +4,10 @@
   "description": "Frontend for spaced repetition quiz app",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "vite build",
+    "build:check": "tsc && vite build",
+    "preview": "vite preview",
+    "deploy": "cd .. && ./deploy.sh"
   },
   "dependencies": {
     "react": "^18.2.0",
