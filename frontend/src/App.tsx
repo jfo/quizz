@@ -176,10 +176,7 @@ function App() {
   useEffect(() => {
     if (availableSections.length > 0 && !isInitializing) {
       // Load question and stats in parallel
-      const loadPromises = [loadQuestion()]
-      if (useBackendStats) {
-        loadPromises.push(loadStats())
-      }
+      const loadPromises = [loadQuestion(), loadStats()]
       Promise.all(loadPromises).catch(err => {
         console.error('Failed to load data:', err)
       })
@@ -565,8 +562,12 @@ function App() {
           </div>
         )}
 
-        {!useBackendStats && (
+        {!useBackendStats && stats && (
           <div className="stats-bar">
+            <div className="stat">
+              <div className="stat-value">{stats.totalQuestions}</div>
+              <div className="stat-label">Total Questions</div>
+            </div>
             <div className="stat">
               <div className="stat-value">
                 {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%

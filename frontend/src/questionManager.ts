@@ -205,13 +205,15 @@ export class LocalQuestionManager implements IQuestionManager {
     };
   }
 
-  async getStats(_sections?: string[], _quizzes?: string[], _timeframeDays?: number): Promise<Stats> {
-    // In frontend-only mode, we don't track stats
-    // Return dummy stats
+  async getStats(sections?: string[], quizzes?: string[], _timeframeDays?: number): Promise<Stats> {
+    // In frontend-only mode, we don't track individual question stats
+    // But we can calculate the total number of questions
+    const allQuestions = this.getAllQuestions(sections, quizzes);
+
     return {
-      totalQuestions: 0,
+      totalQuestions: allQuestions.length,
       studiedQuestions: 0,
-      unstudiedQuestions: 0,
+      unstudiedQuestions: allQuestions.length,
       totalAttempts: 0,
       correctAttempts: 0,
       incorrectAttempts: 0,
