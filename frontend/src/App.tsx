@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes } from './api'
+import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, setBackendMode } from './api'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -22,6 +22,9 @@ function App() {
   const [timeframeDays, setTimeframeDays] = useState(7)
   const [onlyDueMode, setOnlyDueMode] = useState(true)
   const [exploratoryMode, setExploratoryMode] = useState(false)
+  const [useBackendStats, setUseBackendStats] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -84,10 +87,13 @@ function App() {
 
   const loadSections = async () => {
     try {
-      const sections = await getSections()
-      setAvailableSections(sections)
+      // Fetch sections and quizzes in parallel
+      const [sections, quizzesData] = await Promise.all([
+        getSections(),
+        getQuizzes()
+      ])
 
-      const quizzesData = await getQuizzes()
+      setAvailableSections(sections)
       setQuizzesBySection(quizzesData)
 
       // Try to load from localStorage
@@ -139,17 +145,46 @@ function App() {
     }
   }
 
+  // Initialize question manager on startup
   useEffect(() => {
-    loadSections()
+    const initialize = async () => {
+      try {
+        setIsInitializing(true)
+
+        // Always default to frontend-only mode (no backend)
+        const shouldUseBackend = false
+        setUseBackendStats(shouldUseBackend)
+
+        // Initialize the question manager
+        await initializeQuestionManager(shouldUseBackend)
+
+        // Load sections and quizzes
+        await loadSections()
+
+        setIsInitializing(false)
+      } catch (err) {
+        console.error('Failed to initialize:', err)
+        setError('Failed to initialize. Please refresh the page.')
+        setIsInitializing(false)
+      }
+    }
+
+    initialize()
   }, [])
 
   // Load question and stats when selections or shuffle mode change
   useEffect(() => {
-    if (availableSections.length > 0) {
-      loadQuestion()
-      loadStats()
+    if (availableSections.length > 0 && !isInitializing) {
+      // Load question and stats in parallel
+      const loadPromises = [loadQuestion()]
+      if (useBackendStats) {
+        loadPromises.push(loadStats())
+      }
+      Promise.all(loadPromises).catch(err => {
+        console.error('Failed to load data:', err)
+      })
     }
-  }, [selectedSections, selectedQuizzes, shuffleMode, timeframeDays, onlyDueMode, exploratoryMode])
+  }, [selectedSections, selectedQuizzes, shuffleMode, timeframeDays, onlyDueMode, exploratoryMode, isInitializing])
 
   const handleOptionClick = async (index: number) => {
     if (!question) return
@@ -175,8 +210,8 @@ function App() {
       total: prev.total + 1
     }))
 
-    // Only track answers if not in exploratory mode
-    if (!exploratoryMode) {
+    // Only track answers if using backend and not in exploratory mode
+    if (useBackendStats && !exploratoryMode) {
       try {
         const response = await submitAnswer(
           question.id,
@@ -269,60 +304,91 @@ function App() {
     })
   }
 
+  const toggleBackendStats = async () => {
+    try {
+      const newValue = !useBackendStats
+
+      // Reinitialize with new mode
+      setLoading(true)
+      await setBackendMode(newValue)
+
+      // Update state after reinitialization
+      setUseBackendStats(newValue)
+
+      // If switching to frontend-only, clear exploratory mode
+      if (!newValue) {
+        setExploratoryMode(false)
+        localStorage.setItem('exploratoryMode', 'false')
+      }
+
+      // Reload sections/quizzes and first question
+      await loadSections()
+      setLoading(false)
+    } catch (err) {
+      console.error('Failed to switch mode:', err)
+      setError('Failed to switch mode. Please refresh the page.')
+      setLoading(false)
+    }
+  }
+
   const renderSettingsPanel = () => (
     <div className="settings-panel">
       <div className="settings-header">
         <h2>Settings</h2>
       </div>
       <div className="settings-content">
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <h3>Study Mode</h3>
-          </div>
-          <label className="checkbox-item">
-            <input
-              type="checkbox"
-              checked={exploratoryMode}
-              onChange={toggleExploratoryMode}
-            />
-            <span>Exploratory mode (answers not tracked)</span>
-          </label>
-          {exploratoryMode && (
-            <div style={{ fontSize: '0.8125rem', color: '#f59e0b', marginTop: '8px', paddingLeft: '38px' }}>
-              Practice mode - your progress won't be saved
+        {useBackendStats && (
+          <div className="settings-section">
+            <div className="settings-section-header">
+              <h3>Study Mode</h3>
             </div>
-          )}
-        </div>
-
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <h3>Question Order</h3>
-          </div>
-          <label className="checkbox-item">
-            <input
-              type="checkbox"
-              checked={shuffleMode}
-              onChange={toggleShuffleMode}
-              disabled={!exploratoryMode && onlyDueMode}
-            />
-            <span>Shuffle questions (random order)</span>
-          </label>
-          {!shuffleMode && !exploratoryMode && (
-            <>
-              <label className="checkbox-item" style={{ marginTop: '8px' }}>
-                <input
-                  type="checkbox"
-                  checked={onlyDueMode}
-                  onChange={toggleOnlyDueMode}
-                />
-                <span>Only show questions due for review today</span>
-              </label>
-              <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
-                Using spaced repetition algorithm
+            <label className="checkbox-item">
+              <input
+                type="checkbox"
+                checked={exploratoryMode}
+                onChange={toggleExploratoryMode}
+              />
+              <span>Exploratory mode (answers not tracked)</span>
+            </label>
+            {exploratoryMode && (
+              <div style={{ fontSize: '0.8125rem', color: '#f59e0b', marginTop: '8px', paddingLeft: '38px' }}>
+                Practice mode - your progress won't be saved
               </div>
-            </>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+
+        {useBackendStats && (
+          <div className="settings-section">
+            <div className="settings-section-header">
+              <h3>Question Order</h3>
+            </div>
+            <label className="checkbox-item">
+              <input
+                type="checkbox"
+                checked={shuffleMode}
+                onChange={toggleShuffleMode}
+                disabled={!exploratoryMode && onlyDueMode}
+              />
+              <span>Shuffle questions (random order)</span>
+            </label>
+            {!shuffleMode && !exploratoryMode && (
+              <>
+                <label className="checkbox-item" style={{ marginTop: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={onlyDueMode}
+                    onChange={toggleOnlyDueMode}
+                  />
+                  <span>Only show questions due for review today</span>
+                </label>
+                <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+                  Using spaced repetition algorithm
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="settings-section">
           <div className="settings-section-header">
@@ -384,11 +450,61 @@ function App() {
             })}
           </div>
         </div>
+
+        <div className="settings-section" style={{ borderTop: '1px solid #374151', paddingTop: '16px', marginTop: '16px' }}>
+          <button
+            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9ca3af',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '0',
+              width: '100%',
+              textAlign: 'left'
+            }}
+          >
+            <span>{showAdvancedSettings ? '▼' : '▶'}</span>
+            <span>Advanced Settings</span>
+          </button>
+
+          {showAdvancedSettings && (
+            <div style={{ marginTop: '12px' }}>
+              <label className="checkbox-item">
+                <input
+                  type="checkbox"
+                  checked={useBackendStats}
+                  onChange={toggleBackendStats}
+                />
+                <span>Use backend for stats & spaced repetition</span>
+              </label>
+              {useBackendStats ? (
+                <div style={{ fontSize: '0.8125rem', color: '#3b82f6', marginTop: '8px', paddingLeft: '38px' }}>
+                  Full mode - tracks progress with spaced repetition
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.8125rem', color: '#10b981', marginTop: '8px', paddingLeft: '38px' }}>
+                  Simple mode - all questions loaded locally, no tracking
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
 
   const renderMainContent = () => {
+    if (isInitializing) {
+      return (
+        <div className="loading">Initializing...</div>
+      )
+    }
+
     if (loading) {
       return (
         <div className="loading">Loading question...</div>
@@ -409,7 +525,7 @@ function App() {
 
     return (
       <>
-        {stats && (
+        {useBackendStats && stats && (
           <div className="stats-bar">
             <div className="stat">
               <div className="stat-value">{stats.studiedQuestions}/{stats.totalQuestions}</div>
@@ -440,6 +556,17 @@ function App() {
                 </select>
               </div>
             </div>
+            <div className="stat">
+              <div className="stat-value">
+                {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%
+              </div>
+              <div className="stat-label">Session ({sessionStats.total})</div>
+            </div>
+          </div>
+        )}
+
+        {!useBackendStats && (
+          <div className="stats-bar">
             <div className="stat">
               <div className="stat-value">
                 {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%
@@ -511,7 +638,7 @@ function App() {
                 ) : (
                   <strong>Incorrect. Click the correct answer to continue.</strong>
                 )}
-                {questionStrength && !exploratoryMode && (
+                {useBackendStats && questionStrength && !exploratoryMode && (
                   <div className="strength-indicator" style={{ marginTop: '12px', fontSize: '0.875rem' }}>
                     <span style={{ color: questionStrength.color, fontWeight: '600' }}>
                       {questionStrength.level}

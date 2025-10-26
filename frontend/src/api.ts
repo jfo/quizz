@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+import { createQuestionManager, IQuestionManager } from './questionManager';
 
 export interface QuestionOption {
   text: string;
@@ -53,43 +53,52 @@ export interface QuizzesBySection {
   quizzes: QuizInfo[];
 }
 
-export async function getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, onlyDue?: boolean): Promise<Question> {
-  const response = await fetch(`${API_BASE}/questions/next`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      sections: sections && sections.length > 0 ? sections : undefined,
-      quizzes: quizzes && quizzes.length > 0 ? quizzes : undefined,
-      shuffleMode: shuffleMode || false,
-      onlyDue: onlyDue || false,
-    }),
-  });
+// Global question manager instances (cache both)
+let backendManager: IQuestionManager | null = null;
+let localManager: IQuestionManager | null = null;
+let currentManager: IQuestionManager | null = null;
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const error: any = new Error(errorData.message || 'Failed to fetch question');
-    error.isNoDue = errorData.error === 'No questions due';
-    throw error;
+// Initialize the question manager based on mode
+export async function initializeQuestionManager(useBackend: boolean): Promise<void> {
+  if (useBackend) {
+    if (!backendManager) {
+      backendManager = createQuestionManager(true);
+      await backendManager.initialize();
+    }
+    currentManager = backendManager;
+  } else {
+    if (!localManager) {
+      localManager = createQuestionManager(false);
+      await localManager.initialize();
+    }
+    currentManager = localManager;
   }
-  return response.json();
+}
+
+// Switch mode (reuse cached managers)
+export async function setBackendMode(useBackend: boolean): Promise<void> {
+  await initializeQuestionManager(useBackend);
+}
+
+// Get current question manager (for internal use)
+function getManager(): IQuestionManager {
+  if (!currentManager) {
+    throw new Error('Question manager not initialized. Call initializeQuestionManager first.');
+  }
+  return currentManager;
+}
+
+// API functions that delegate to the question manager
+export async function getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, onlyDue?: boolean): Promise<Question> {
+  return getManager().getNextQuestion(sections, quizzes, shuffleMode, onlyDue);
 }
 
 export async function getSections(): Promise<string[]> {
-  const response = await fetch(`${API_BASE}/sections`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch sections');
-  }
-  return response.json();
+  return getManager().getSections();
 }
 
 export async function getQuizzes(): Promise<QuizzesBySection[]> {
-  const response = await fetch(`${API_BASE}/quizzes`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch quizzes');
-  }
-  return response.json();
+  return getManager().getQuizzes();
 }
 
 export async function submitAnswer(
@@ -98,41 +107,9 @@ export async function submitAnswer(
   selectedOption: string,
   responseTimeMs?: number
 ): Promise<AnswerResponse> {
-  const response = await fetch(`${API_BASE}/answers`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      questionId,
-      isCorrect,
-      selectedOption,
-      responseTimeMs,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to submit answer');
-  }
-
-  return response.json();
+  return getManager().submitAnswer(questionId, isCorrect, selectedOption, responseTimeMs);
 }
 
 export async function getStats(sections?: string[], quizzes?: string[], timeframeDays?: number): Promise<Stats> {
-  const response = await fetch(`${API_BASE}/stats`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      sections: sections && sections.length > 0 ? sections : undefined,
-      quizzes: quizzes && quizzes.length > 0 ? quizzes : undefined,
-      timeframeDays: timeframeDays !== undefined ? timeframeDays : 7,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch stats');
-  }
-  return response.json();
+  return getManager().getStats(sections, quizzes, timeframeDays);
 }
