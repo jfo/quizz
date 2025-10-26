@@ -331,7 +331,7 @@ function App() {
   const renderSettingsPanel = () => (
     <div className="settings-panel">
       <div className="settings-header">
-        <h2>Settings</h2>
+        <h2>Question Selection</h2>
       </div>
       <div className="settings-content">
         {useBackendStats && (
@@ -664,15 +664,16 @@ function App() {
       <div className="app">
         <div className="header">
           <h1>
-            Quiz
+            Indfødsretsprøven
             {exploratoryMode && (
               <span style={{
                 fontSize: '0.75rem',
                 fontWeight: '400',
-                color: '#f59e0b',
+                color: '#fef2f2',
                 marginLeft: '12px',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.05em',
+                opacity: 0.9
               }}>
                 Exploratory Mode
               </span>
