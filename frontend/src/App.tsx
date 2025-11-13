@@ -710,26 +710,30 @@ function App() {
               <div className="question-meta">{question.metadata}</div>
             )}
 
-            {(question.questionEn || question.options.some(opt => opt.textEn)) && (
-              <button
-                className="peek-icon peek-icon-global"
-                onMouseDown={() => setShowTranslations(true)}
-                onMouseUp={() => setShowTranslations(false)}
-                onMouseLeave={() => setShowTranslations(false)}
-                onTouchStart={() => setShowTranslations(true)}
-                onTouchEnd={() => setShowTranslations(false)}
-                aria-label="Hold to see English translations"
-                aria-pressed={showTranslations}
-                title="Hold to see translations"
-              >
-                {showTranslations ? '👁️' : '👁️‍🗨️'}
-              </button>
-            )}
-
             <div className="question-section">
               <div className="question-text">
                 {showTranslations && question.questionEn ? question.questionEn : question.question}
               </div>
+
+              {(question.questionEn || question.options.some(opt => opt.textEn)) && (
+                <div className="peek-icon-below-question">
+                  <button
+                    className="peek-icon"
+                    onMouseDown={() => setShowTranslations(true)}
+                    onMouseUp={() => setShowTranslations(false)}
+                    onMouseLeave={() => setShowTranslations(false)}
+                    onTouchStart={() => setShowTranslations(true)}
+                    onTouchEnd={() => setShowTranslations(false)}
+                    aria-label="Hold to see English translations"
+                    aria-pressed={showTranslations}
+                    title="Hold to see translations"
+                  >
+                    <span>{showTranslations ? '🔍' : '🌐'}</span>
+                    <span>{showTranslations ? 'Viewing English' : 'Show English'}</span>
+                  </button>
+                </div>
+              )}
+
               {showTranslations && question.section && (
                 <div style={{
                   fontSize: '0.75rem',
