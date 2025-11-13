@@ -22,7 +22,7 @@ export interface IQuestionManager {
   getQuizzes(): Promise<QuizzesBySection[]>;
   getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question>;
   submitAnswer(questionId: string, isCorrect: boolean, selectedOption: string, responseTimeMs?: number): Promise<AnswerResponse>;
-  getStats(sections?: string[], quizzes?: string[], timeframeDays?: number): Promise<Stats>;
+  getStats(sections?: string[], quizzes?: string[], timeframeDays?: number, ratingRange?: [number, number]): Promise<Stats>;
   initialize(): Promise<void>;
 }
 
@@ -171,10 +171,19 @@ export class LocalQuestionManager implements IQuestionManager {
     };
   }
 
-  async getStats(sections?: string[], quizzes?: string[], _timeframeDays?: number): Promise<Stats> {
+  async getStats(sections?: string[], quizzes?: string[], _timeframeDays?: number, ratingRange?: [number, number]): Promise<Stats> {
     // In frontend-only mode, we don't track individual question stats
     // But we can calculate the total number of questions
-    const allQuestions = this.getAllQuestions(sections, quizzes);
+    let allQuestions = this.getAllQuestions(sections, quizzes);
+
+    // Filter by rating range if specified
+    if (ratingRange) {
+      const states = loadQuestionStates();
+      allQuestions = allQuestions.filter(q => {
+        const state = states[q.id] || { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 };
+        return state.rating >= ratingRange[0] && state.rating <= ratingRange[1];
+      });
+    }
 
     return {
       totalQuestions: allQuestions.length,
