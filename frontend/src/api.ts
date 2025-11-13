@@ -55,44 +55,28 @@ export interface QuizzesBySection {
   quizzes: QuizInfo[];
 }
 
-// Global question manager instances (cache both)
-let backendManager: IQuestionManager | null = null;
-let localManager: IQuestionManager | null = null;
-let currentManager: IQuestionManager | null = null;
+// Global question manager instance
+let questionManager: IQuestionManager | null = null;
 
-// Initialize the question manager based on mode
-export async function initializeQuestionManager(useBackend: boolean): Promise<void> {
-  if (useBackend) {
-    if (!backendManager) {
-      backendManager = createQuestionManager(true);
-      await backendManager.initialize();
-    }
-    currentManager = backendManager;
-  } else {
-    if (!localManager) {
-      localManager = createQuestionManager(false);
-      await localManager.initialize();
-    }
-    currentManager = localManager;
+// Initialize the question manager
+export async function initializeQuestionManager(): Promise<void> {
+  if (!questionManager) {
+    questionManager = createQuestionManager();
+    await questionManager.initialize();
   }
-}
-
-// Switch mode (reuse cached managers)
-export async function setBackendMode(useBackend: boolean): Promise<void> {
-  await initializeQuestionManager(useBackend);
 }
 
 // Get current question manager (for internal use)
 function getManager(): IQuestionManager {
-  if (!currentManager) {
+  if (!questionManager) {
     throw new Error('Question manager not initialized. Call initializeQuestionManager first.');
   }
-  return currentManager;
+  return questionManager;
 }
 
 // API functions that delegate to the question manager
-export async function getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, onlyDue?: boolean): Promise<Question> {
-  return getManager().getNextQuestion(sections, quizzes, shuffleMode, onlyDue);
+export async function getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question> {
+  return getManager().getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode, ratingRange);
 }
 
 export async function getSections(): Promise<string[]> {
