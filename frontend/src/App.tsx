@@ -767,8 +767,14 @@ function App() {
                   onMouseDown={() => setShowTranslations(true)}
                   onMouseUp={() => setShowTranslations(false)}
                   onMouseLeave={() => setShowTranslations(false)}
-                  onTouchStart={() => setShowTranslations(true)}
-                  onTouchEnd={() => setShowTranslations(false)}
+                  onTouchStart={(e) => {
+                    e.preventDefault()
+                    setShowTranslations(true)
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault()
+                    setShowTranslations(false)
+                  }}
                   aria-label="Hold to see English translations"
                   aria-pressed={showTranslations}
                   title="Hold to see translations"
