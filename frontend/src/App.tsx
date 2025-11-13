@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager } from './api'
-import { getQuestionState, setQuestionRating, setQuestionSelfRating, updateRatingAfterAnswer, exportState, importState } from './questionState'
+import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState } from './questionState'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -25,8 +25,6 @@ function App() {
   const [showOtherTopics, setShowOtherTopics] = useState(false)
   const [showRatingUI, setShowRatingUI] = useState(false)
   const [currentQuestionRating, setCurrentQuestionRating] = useState(0)
-  const [currentSelfRating, setCurrentSelfRating] = useState(0)
-  const [showSelfRatingUI, setShowSelfRatingUI] = useState(false)
   const [ratingFilter, setRatingFilter] = useState<[number, number] | null>(null)
 
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -59,12 +57,10 @@ function App() {
       setStartTime(Date.now())
       setShowTranslations(false)
       setShowRatingUI(false)
-      setShowSelfRatingUI(false)
 
       // Load current ratings for this question
       const state = getQuestionState(nextQuestion.id)
       setCurrentQuestionRating(state.rating)
-      setCurrentSelfRating(state.selfRating)
     } catch (err: any) {
       setError('Failed to load question.')
       console.error(err)
@@ -223,13 +219,6 @@ function App() {
     const updatedState = setQuestionRating(question.id, rating)
     setCurrentQuestionRating(updatedState.rating)
     setShowRatingUI(false)
-  }
-
-  const handleSelfRatingSelect = (rating: number) => {
-    if (!question) return
-    const updatedState = setQuestionSelfRating(question.id, rating)
-    setCurrentSelfRating(updatedState.selfRating)
-    setShowSelfRatingUI(false)
   }
 
   const toggleSection = (section: string) => {
@@ -923,85 +912,6 @@ function App() {
                       </div>
                     </div>
                   )}
-
-                  {/* Self-Rating Display */}
-                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>Your self-rating:</span>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: '600',
-                        color: currentSelfRating === 0 ? '#9ca3af' : '#3b82f6',
-                        minWidth: '32px',
-                        textAlign: 'center'
-                      }}>
-                        {currentSelfRating}
-                      </div>
-                      <button
-                        onClick={() => setShowSelfRatingUI(!showSelfRatingUI)}
-                        style={{
-                          background: 'white',
-                          border: '2px solid #d1d5db',
-                          borderRadius: '4px',
-                          padding: '4px 12px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          color: '#374151',
-                          fontWeight: '500'
-                        }}
-                      >
-                        {showSelfRatingUI ? 'Close' : 'Rate'}
-                      </button>
-                    </div>
-
-                    {showSelfRatingUI && (
-                      <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.75rem', marginBottom: '8px', opacity: 0.7 }}>
-                          How confident are you with this question?
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
-                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
-                            <button
-                              key={level}
-                              onClick={() => handleSelfRatingSelect(level)}
-                              style={{
-                                background: level === currentSelfRating ? '#3b82f6' : 'white',
-                                border: level === currentSelfRating ? '2px solid #3b82f6' : '2px solid #d1d5db',
-                                borderRadius: '6px',
-                                width: '40px',
-                                height: '40px',
-                                cursor: 'pointer',
-                                fontSize: '1rem',
-                                fontWeight: level === currentSelfRating ? '600' : '500',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: level === currentSelfRating ? 'white' : '#374151',
-                                transition: 'all 0.15s'
-                              }}
-                              onMouseEnter={(e) => {
-                                if (level !== currentSelfRating) {
-                                  e.currentTarget.style.background = '#eff6ff'
-                                  e.currentTarget.style.borderColor = '#3b82f6'
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (level !== currentSelfRating) {
-                                  e.currentTarget.style.background = 'white'
-                                  e.currentTarget.style.borderColor = '#d1d5db'
-                                }
-                              }}
-                            >
-                              {level}
-                            </button>
-                          ))}
-                        </div>
-                        <div style={{ fontSize: '0.65rem', marginTop: '8px', opacity: 0.5 }}>
-                          0 = not confident, 10 = very confident
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             )}
