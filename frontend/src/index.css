@@ -38,6 +38,7 @@ body {
   padding: 18px 24px;
   text-align: center;
   box-shadow: 0 1px 3px rgba(163, 21, 55, 0.12);
+  position: relative;
 }
 
 .header h1 {
@@ -129,18 +130,24 @@ body {
   transform: scale(1.1);
 }
 
-.peek-icon-global {
+.peek-icon-header {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  opacity: 0.25;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  opacity: 0.7;
   transition: opacity 0.2s ease, transform 0.15s ease;
   z-index: 10;
   font-size: 1.25rem;
 }
 
-.peek-icon-global:hover {
-  opacity: 0.8;
+.peek-icon-header:hover {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.15);
+}
+
+.peek-icon-header:active {
+  transform: translateY(-50%) scale(1.1);
 }
 
 .options {
@@ -465,6 +472,51 @@ body {
 .quiz-count {
   font-size: 0.75rem;
   color: #9ca3af;
+}
+
+/* Range Slider Styling */
+.range-slider-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #a31537;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.range-slider-thumb::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 6px rgba(163, 21, 55, 0.4);
+}
+
+.range-slider-thumb::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(163, 21, 55, 0.5);
+}
+
+.range-slider-thumb::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #a31537;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.range-slider-thumb::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 6px rgba(163, 21, 55, 0.4);
+}
+
+.range-slider-thumb::-moz-range-thumb:active {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(163, 21, 55, 0.5);
 }
 
 /* Responsive Mobile Styles */
