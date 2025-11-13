@@ -86,36 +86,36 @@ describe('questionState', () => {
   })
 
   describe('updateRatingAfterAnswer', () => {
-    it('should increment correct streak for unrated question when correct', () => {
+    it('should increment rating and streak when correct', () => {
       const state = updateRatingAfterAnswer('q1', true)
       expect(state.correctStreak).toBe(1)
-      expect(state.rating).toBe(0) // Still unrated
+      expect(state.rating).toBe(1) // Incremented from 0
     })
 
-    it('should maintain rating and increment streak when rated and correct', () => {
+    it('should increment rating when already rated and correct', () => {
       updateQuestionState('q1', { rating: 3, correctStreak: 2 })
       const state = updateRatingAfterAnswer('q1', true)
-      expect(state.rating).toBe(3) // Rating unchanged
+      expect(state.rating).toBe(4) // Incremented
       expect(state.correctStreak).toBe(3) // Streak incremented
     })
 
-    it('should downgrade rating when incorrect and already rated', () => {
+    it('should decrement rating when incorrect and already rated', () => {
       updateQuestionState('q1', { rating: 4, correctStreak: 2 })
       const state = updateRatingAfterAnswer('q1', false)
-      expect(state.rating).toBe(3) // Downgraded by 1
+      expect(state.rating).toBe(3) // Decremented by 1
       expect(state.correctStreak).toBe(0) // Streak reset
       expect(state.incorrectCount).toBe(1)
     })
 
-    it('should not downgrade rating below 1', () => {
-      updateQuestionState('q1', { rating: 1 })
+    it('should not decrement rating below 0', () => {
+      updateQuestionState('q1', { rating: 0 })
       const state = updateRatingAfterAnswer('q1', false)
-      expect(state.rating).toBe(1) // Minimum rating
+      expect(state.rating).toBe(0) // Minimum rating
     })
 
-    it('should track incorrect count for unrated question', () => {
+    it('should track incorrect count and stay at 0 when unrated', () => {
       const state = updateRatingAfterAnswer('q1', false)
-      expect(state.rating).toBe(0) // Still unrated
+      expect(state.rating).toBe(0) // Still at 0
       expect(state.incorrectCount).toBe(1)
       expect(state.correctStreak).toBe(0)
     })
@@ -135,13 +135,13 @@ describe('questionState', () => {
   })
 
   describe('calculateNeedScore', () => {
-    it('should give medium priority to unrated questions', () => {
+    it('should give high priority to unknown questions (rating 0)', () => {
       const state = { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
       const score = calculateNeedScore(state)
-      expect(score).toBe(50)
+      expect(score).toBe(100) // Max score for unknown questions
     })
 
-    it('should prioritize unrated questions with incorrect answers', () => {
+    it('should prioritize unknown questions with incorrect answers', () => {
       const state1 = { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
       const state2 = { rating: 0, correctStreak: 0, incorrectCount: 2, lastAnswered: 0 }
 
@@ -151,14 +151,14 @@ describe('questionState', () => {
       expect(score2).toBeGreaterThan(score1)
     })
 
-    it('should give higher priority to harder questions (lower rating)', () => {
-      const easy = { rating: 5, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
-      const hard = { rating: 1, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+    it('should give higher priority to questions with lower knowledge (lower rating)', () => {
+      const wellKnown = { rating: 5, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+      const lessKnown = { rating: 1, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
 
-      const easyScore = calculateNeedScore(easy)
-      const hardScore = calculateNeedScore(hard)
+      const wellKnownScore = calculateNeedScore(wellKnown)
+      const lessKnownScore = calculateNeedScore(lessKnown)
 
-      expect(hardScore).toBeGreaterThan(easyScore)
+      expect(lessKnownScore).toBeGreaterThan(wellKnownScore)
     })
 
     it('should boost questions with many incorrect answers', () => {

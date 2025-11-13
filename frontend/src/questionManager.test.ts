@@ -221,14 +221,14 @@ describe('LocalQuestionManager', () => {
       expect(q1.id).toBe('q2')
     })
 
-    it('should handle unrated questions appropriately', async () => {
+    it('should handle unknown questions appropriately', async () => {
       await manager.initialize()
 
       // Set up mixed states
       const states: QuestionStates = {
-        'q1': { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // unrated
-        'q2': { rating: 5, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // easy, rated
-        'q3': { rating: 1, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // hard, rated
+        'q1': { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // unknown
+        'q2': { rating: 5, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // well known
+        'q3': { rating: 1, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // less known
       }
       saveQuestionStates(states)
 
@@ -236,10 +236,10 @@ describe('LocalQuestionManager', () => {
       const q2 = await manager.getNextQuestion(undefined, undefined, false, true)
       const q3 = await manager.getNextQuestion(undefined, undefined, false, true)
 
-      // Hard rated question should come first, then unrated, then easy
-      expect(q1.id).toBe('q3') // hardest rated
-      expect(q2.id).toBe('q1') // unrated (medium priority)
-      expect(q3.id).toBe('q2') // easiest rated
+      // Unknown should come first (highest priority), then less known, then well known
+      expect(q1.id).toBe('q1') // unknown (highest priority)
+      expect(q2.id).toBe('q3') // less known
+      expect(q3.id).toBe('q2') // well known
     })
   })
 

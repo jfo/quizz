@@ -200,11 +200,6 @@ function App() {
     if (question) {
       const updatedState = updateRatingAfterAnswer(question.id, isCorrect)
       setCurrentQuestionRating(updatedState.rating)
-
-      // Show rating UI if question is unrated
-      if (updatedState.rating === 0) {
-        setShowRatingUI(true)
-      }
     }
   }
 
@@ -349,76 +344,6 @@ function App() {
         <h2>Question Selection</h2>
       </div>
       <div className="settings-content">
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <h3>Question Order</h3>
-          </div>
-          <label className="checkbox-item">
-            <input
-              type="checkbox"
-              checked={mostNeededMode}
-              onChange={toggleMostNeededMode}
-            />
-            <span>Most needed order (prioritize hard questions)</span>
-          </label>
-          <label className="checkbox-item" style={{ marginTop: '8px' }}>
-            <input
-              type="checkbox"
-              checked={shuffleMode}
-              onChange={toggleShuffleMode}
-            />
-            <span>Shuffle questions</span>
-          </label>
-          <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
-            {mostNeededMode
-              ? 'Questions ordered by difficulty and performance'
-              : shuffleMode
-                ? 'Questions in random order'
-                : 'Questions in sequential order'}
-          </div>
-        </div>
-
-        <div className="settings-section">
-          <div className="settings-section-header">
-            <h3>State Management</h3>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-            <button
-              onClick={handleDownloadState}
-              style={{
-                padding: '8px 16px',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}
-            >
-              Download Progress
-            </button>
-            <button
-              onClick={handleRestoreState}
-              style={{
-                padding: '8px 16px',
-                background: '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}
-            >
-              Restore Progress
-            </button>
-          </div>
-          <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px' }}>
-            Save your ratings and progress to a file
-          </div>
-        </div>
-
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
@@ -593,6 +518,96 @@ function App() {
             </div>
           </div>
         </div>
+
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Question Order</h3>
+          </div>
+          <label className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={mostNeededMode}
+              onChange={toggleMostNeededMode}
+            />
+            <span>Most needed order (prioritize questions you know least)</span>
+          </label>
+          <label className="checkbox-item" style={{ marginTop: '8px' }}>
+            <input
+              type="checkbox"
+              checked={shuffleMode}
+              onChange={toggleShuffleMode}
+            />
+            <span>Shuffle questions</span>
+          </label>
+          <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+            {mostNeededMode
+              ? 'Questions ordered by knowledge level and performance'
+              : shuffleMode
+                ? 'Questions in random order'
+                : 'Questions in sequential order'}
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>State Management</h3>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+            <button
+              onClick={handleDownloadState}
+              className="text-button"
+              style={{
+                padding: '10px 16px',
+                background: 'transparent',
+                color: '#9ca3af',
+                border: '1px solid #374151',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#a31537'
+                e.currentTarget.style.color = '#f3f4f6'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#374151'
+                e.currentTarget.style.color = '#9ca3af'
+              }}
+            >
+              Download Progress
+            </button>
+            <button
+              onClick={handleRestoreState}
+              className="text-button"
+              style={{
+                padding: '10px 16px',
+                background: 'transparent',
+                color: '#9ca3af',
+                border: '1px solid #374151',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#a31537'
+                e.currentTarget.style.color = '#f3f4f6'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#374151'
+                e.currentTarget.style.color = '#9ca3af'
+              }}
+            >
+              Restore Progress
+            </button>
+          </div>
+          <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginTop: '8px' }}>
+            Save or load your ratings and progress
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -713,102 +728,81 @@ function App() {
                   <strong>Incorrect. Click the correct answer to continue.</strong>
                 )}
 
-                {/* Rating Display/UI */}
+                {/* Knowledge Level Display */}
                 <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                  {!showRatingUI && currentQuestionRating > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>Difficulty:</span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        {[1, 2, 3, 4, 5].map(rating => (
-                          <button
-                            key={rating}
-                            onClick={() => handleRatingSelect(rating)}
-                            style={{
-                              background: rating <= currentQuestionRating ? '#fbbf24' : 'rgba(255,255,255,0.1)',
-                              border: 'none',
-                              borderRadius: '4px',
-                              width: '32px',
-                              height: '32px',
-                              cursor: 'pointer',
-                              fontSize: '1rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            {rating <= currentQuestionRating ? '★' : '☆'}
-                          </button>
-                        ))}
-                      </div>
-                      <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '4px' }}>
-                        (click to change)
-                      </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>Knowledge level:</span>
+                    <div style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '600',
+                      color: currentQuestionRating === 0 ? '#9ca3af' : '#10b981',
+                      minWidth: '32px',
+                      textAlign: 'center'
+                    }}>
+                      {currentQuestionRating}
                     </div>
-                  )}
+                    <button
+                      onClick={() => setShowRatingUI(!showRatingUI)}
+                      style={{
+                        background: 'rgba(255,255,255,0.1)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '4px',
+                        padding: '4px 12px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        color: 'white',
+                        opacity: 0.7
+                      }}
+                    >
+                      {showRatingUI ? 'Close' : 'Adjust'}
+                    </button>
+                  </div>
 
                   {showRatingUI && (
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.875rem', marginBottom: '12px', opacity: 0.9 }}>
-                        How hard was this question?
+                    <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', marginBottom: '8px', opacity: 0.7 }}>
+                        Set knowledge level manually:
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
-                        {[1, 2, 3, 4, 5].map(rating => (
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                           <button
-                            key={rating}
-                            onClick={() => handleRatingSelect(rating)}
+                            key={level}
+                            onClick={() => handleRatingSelect(level)}
                             style={{
-                              background: 'rgba(255,255,255,0.1)',
-                              border: '2px solid rgba(255,255,255,0.2)',
-                              borderRadius: '8px',
-                              width: '48px',
-                              height: '48px',
+                              background: level === currentQuestionRating ? '#a31537' : 'rgba(255,255,255,0.1)',
+                              border: level === currentQuestionRating ? '2px solid #a31537' : '1px solid rgba(255,255,255,0.2)',
+                              borderRadius: '6px',
+                              width: '40px',
+                              height: '40px',
                               cursor: 'pointer',
-                              fontSize: '1.25rem',
+                              fontSize: '1rem',
+                              fontWeight: level === currentQuestionRating ? '600' : '400',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              flexDirection: 'column',
                               color: 'white',
-                              transition: 'all 0.2s'
+                              transition: 'all 0.15s'
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#fbbf24'
-                              e.currentTarget.style.borderColor = '#fbbf24'
-                              e.currentTarget.style.transform = 'scale(1.1)'
+                              if (level !== currentQuestionRating) {
+                                e.currentTarget.style.background = 'rgba(163, 21, 55, 0.3)'
+                                e.currentTarget.style.borderColor = '#a31537'
+                              }
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-                              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
-                              e.currentTarget.style.transform = 'scale(1)'
+                              if (level !== currentQuestionRating) {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                              }
                             }}
                           >
-                            <div style={{ fontSize: '1.25rem' }}>★</div>
-                            <div style={{ fontSize: '0.625rem', marginTop: '2px' }}>{rating}</div>
+                            {level}
                           </button>
                         ))}
                       </div>
-                      <div style={{ fontSize: '0.75rem', marginTop: '12px', opacity: 0.6 }}>
-                        1 = easiest, 5 = hardest
+                      <div style={{ fontSize: '0.65rem', marginTop: '8px', opacity: 0.5 }}>
+                        0 = don't know, higher = better knowledge
                       </div>
-                    </div>
-                  )}
-
-                  {!showRatingUI && currentQuestionRating === 0 && (
-                    <div style={{ textAlign: 'center' }}>
-                      <button
-                        onClick={() => setShowRatingUI(true)}
-                        style={{
-                          background: 'rgba(255,255,255,0.1)',
-                          border: '1px solid rgba(255,255,255,0.2)',
-                          borderRadius: '6px',
-                          padding: '8px 16px',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          color: 'white'
-                        }}
-                      >
-                        Rate this question
-                      </button>
                     </div>
                   )}
                 </div>

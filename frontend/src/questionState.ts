@@ -1,7 +1,7 @@
 // Question state management with localStorage persistence
 
 export interface QuestionState {
-  rating: number; // 0 = unrated, 1-5 = rated difficulty
+  rating: number; // 0 = unrated/unknown, higher = better knowledge (increments on correct, decrements on incorrect)
   correctStreak: number; // consecutive correct answers
   incorrectCount: number; // total incorrect answers
   lastAnswered: number; // timestamp
@@ -61,35 +61,18 @@ export function updateRatingAfterAnswer(questionId: string, isCorrect: boolean):
   const current = getQuestionState(questionId);
 
   if (isCorrect) {
-    // Correct answer
-    if (current.rating === 0) {
-      // Unrated - start building streak
-      return updateQuestionState(questionId, {
-        correctStreak: current.correctStreak + 1,
-      });
-    } else {
-      // Already rated - maintain or increase rating slightly
-      // But streak doesn't change the rating once it's set
-      return updateQuestionState(questionId, {
-        correctStreak: current.correctStreak + 1,
-      });
-    }
+    // Correct answer - increment rating by 1
+    return updateQuestionState(questionId, {
+      rating: current.rating + 1,
+      correctStreak: current.correctStreak + 1,
+    });
   } else {
-    // Incorrect answer
-    if (current.rating > 0) {
-      // Already rated - downgrade by 1 (minimum 1)
-      return updateQuestionState(questionId, {
-        rating: Math.max(1, current.rating - 1),
-        correctStreak: 0,
-        incorrectCount: current.incorrectCount + 1,
-      });
-    } else {
-      // Unrated - just track incorrect count
-      return updateQuestionState(questionId, {
-        correctStreak: 0,
-        incorrectCount: current.incorrectCount + 1,
-      });
-    }
+    // Incorrect answer - decrement rating by 1 (minimum 0)
+    return updateQuestionState(questionId, {
+      rating: Math.max(0, current.rating - 1),
+      correctStreak: 0,
+      incorrectCount: current.incorrectCount + 1,
+    });
   }
 }
 
@@ -102,20 +85,15 @@ export function setQuestionRating(questionId: string, rating: number): QuestionS
 export function calculateNeedScore(state: QuestionState): number {
   const { rating, correctStreak, incorrectCount, lastAnswered } = state;
 
-  // Unrated questions have medium priority
-  if (rating === 0) {
-    // Prioritize questions we've gotten wrong
-    return 50 + (incorrectCount * 10) - (correctStreak * 5);
-  }
-
-  // Rated questions: lower rating = harder = more needed
-  // Rating 1 = 100 points, Rating 5 = 20 points
-  const ratingScore = (6 - rating) * 20;
+  // Lower rating = less knowledge = more needed
+  // Rating 0 = 100 points (unknown), higher ratings = lower priority
+  // Each rating point reduces need by 15 points
+  const ratingScore = 100 - (rating * 15);
 
   // Boost if we've gotten it wrong recently
   const incorrectBoost = incorrectCount * 5;
 
-  // Reduce if we have a streak
+  // Reduce if we have a long correct streak
   const streakPenalty = correctStreak * 3;
 
   // Time decay: boost questions we haven't seen recently (1 point per day)
