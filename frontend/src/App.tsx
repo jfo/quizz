@@ -764,23 +764,13 @@ function App() {
               <div className="peek-icon-below-question">
                 <button
                   className="peek-icon"
-                  onMouseDown={() => setShowTranslations(true)}
-                  onMouseUp={() => setShowTranslations(false)}
-                  onMouseLeave={() => setShowTranslations(false)}
-                  onTouchStart={(e) => {
-                    e.preventDefault()
-                    setShowTranslations(true)
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault()
-                    setShowTranslations(false)
-                  }}
-                  aria-label="Hold to see English translations"
+                  onClick={() => setShowTranslations(!showTranslations)}
+                  aria-label={showTranslations ? 'Hide English translations' : 'Show English translations'}
                   aria-pressed={showTranslations}
-                  title="Hold to see translations"
+                  title="Toggle translations"
                 >
                   <span>{showTranslations ? '🔍' : '🌐'}</span>
-                  <span>{showTranslations ? 'Viewing English' : 'Show English'}</span>
+                  <span>{showTranslations ? 'Hide English' : 'Show English'}</span>
                 </button>
               </div>
             )}
