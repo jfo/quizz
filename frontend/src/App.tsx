@@ -361,7 +361,7 @@ function App() {
   }
 
   const renderSettingsPanel = () => (
-    <div className="settings-panel">
+    <div className="settings-panel" role="complementary" aria-label="Settings and quiz selection">
       <div className="settings-header">
         <h2>Question Selection</h2>
       </div>
@@ -370,8 +370,20 @@ function App() {
           <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
             <div className="settings-actions">
-              <button onClick={selectAllQuizzes} className="text-button">All</button>
-              <button onClick={deselectAllQuizzes} className="text-button">None</button>
+              <button
+                onClick={selectAllQuizzes}
+                className="text-button"
+                aria-label="Select all quizzes"
+              >
+                All
+              </button>
+              <button
+                onClick={deselectAllQuizzes}
+                className="text-button"
+                aria-label="Deselect all quizzes"
+              >
+                None
+              </button>
             </div>
           </div>
           <div className="quiz-tree">
@@ -379,25 +391,11 @@ function App() {
             <div style={{ marginBottom: '16px' }}>
               <button
                 onClick={() => setShowChapters(!showChapters)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
-                  color: '#6b7280',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  marginBottom: '8px',
-                  paddingLeft: '0',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  width: '100%',
-                  textAlign: 'left'
-                }}
+                className="category-header"
+                aria-expanded={showChapters}
+                aria-controls="book-chapters-list"
               >
-                <span style={{ fontSize: '0.65rem' }}>{showChapters ? '▼' : '▶'}</span>
+                <span className="category-icon">{showChapters ? '▼' : '▶'}</span>
                 <span>Book Chapters</span>
               </button>
               {showChapters && quizzesBySection
@@ -417,6 +415,8 @@ function App() {
                         <button
                           className="expand-button"
                           onClick={() => toggleSectionExpanded(sectionData.section)}
+                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${sectionData.section}`}
+                          aria-expanded={isExpanded}
                         >
                           {isExpanded ? '▼' : '▶'}
                         </button>
@@ -427,12 +427,14 @@ function App() {
                             if (input) input.indeterminate = someSelected
                           }}
                           onChange={() => toggleSection(sectionData.section)}
-                          style={{ cursor: 'pointer', accentColor: '#a31537' }}
+                          aria-label={`Select all quizzes in ${sectionData.section}`}
                         />
                         <span
                           className="section-name"
                           onClick={() => jumpToSection(sectionData.section)}
-                          style={{ cursor: 'pointer', flex: 1 }}
+                          role="button"
+                          tabIndex={0}
+                          onKeyPress={(e) => e.key === 'Enter' && jumpToSection(sectionData.section)}
                         >
                           {sectionData.section} ({selectedCount}/{totalCount})
                         </span>
@@ -445,6 +447,7 @@ function App() {
                                 type="checkbox"
                                 checked={selectedQuizzes.includes(quiz.url)}
                                 onChange={() => toggleQuiz(quiz.url)}
+                                aria-label={`${quiz.title} (${quiz.questionCount} questions)`}
                               />
                               <span className="quiz-title">{quiz.title}</span>
                               <span className="quiz-count">({quiz.questionCount})</span>
@@ -461,25 +464,11 @@ function App() {
             <div>
               <button
                 onClick={() => setShowOtherTopics(!showOtherTopics)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
-                  color: '#6b7280',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  marginBottom: '8px',
-                  paddingLeft: '0',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  width: '100%',
-                  textAlign: 'left'
-                }}
+                className="category-header"
+                aria-expanded={showOtherTopics}
+                aria-controls="other-topics-list"
               >
-                <span style={{ fontSize: '0.65rem' }}>{showOtherTopics ? '▼' : '▶'}</span>
+                <span className="category-icon">{showOtherTopics ? '▼' : '▶'}</span>
                 <span>Other Topics</span>
               </button>
               {showOtherTopics && quizzesBySection
@@ -499,6 +488,8 @@ function App() {
                         <button
                           className="expand-button"
                           onClick={() => toggleSectionExpanded(sectionData.section)}
+                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${sectionData.section}`}
+                          aria-expanded={isExpanded}
                         >
                           {isExpanded ? '▼' : '▶'}
                         </button>
@@ -509,12 +500,14 @@ function App() {
                             if (input) input.indeterminate = someSelected
                           }}
                           onChange={() => toggleSection(sectionData.section)}
-                          style={{ cursor: 'pointer', accentColor: '#a31537' }}
+                          aria-label={`Select all quizzes in ${sectionData.section}`}
                         />
                         <span
                           className="section-name"
                           onClick={() => jumpToSection(sectionData.section)}
-                          style={{ cursor: 'pointer', flex: 1 }}
+                          role="button"
+                          tabIndex={0}
+                          onKeyPress={(e) => e.key === 'Enter' && jumpToSection(sectionData.section)}
                         >
                           {sectionData.section} ({selectedCount}/{totalCount})
                         </span>
@@ -527,6 +520,7 @@ function App() {
                                 type="checkbox"
                                 checked={selectedQuizzes.includes(quiz.url)}
                                 onChange={() => toggleQuiz(quiz.url)}
+                                aria-label={`${quiz.title} (${quiz.questionCount} questions)`}
                               />
                               <span className="quiz-title">{quiz.title}</span>
                               <span className="quiz-count">({quiz.questionCount})</span>
@@ -574,25 +568,17 @@ function App() {
           <div className="settings-section-header">
             <h3>Knowledge Level Filter</h3>
           </div>
-          <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '8px' }}>
+          <p className="filter-hint" style={{ marginBottom: '12px' }}>
             Only show questions with knowledge level:
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+          </p>
+          <div className="filter-buttons">
             <button
               onClick={() => {
                 setRatingFilter(null)
                 localStorage.removeItem('ratingFilter')
               }}
-              style={{
-                padding: '6px 12px',
-                background: ratingFilter === null ? '#a31537' : 'rgba(255,255,255,0.1)',
-                color: 'white',
-                border: '1px solid ' + (ratingFilter === null ? '#a31537' : '#374151'),
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: ratingFilter === null ? '600' : '400'
-              }}
+              className={`filter-button ${ratingFilter === null ? 'active' : ''}`}
+              aria-pressed={ratingFilter === null}
             >
               All
             </button>
@@ -602,16 +588,8 @@ function App() {
                 setRatingFilter(filter)
                 localStorage.setItem('ratingFilter', JSON.stringify(filter))
               }}
-              style={{
-                padding: '6px 12px',
-                background: ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0 ? '#a31537' : 'rgba(255,255,255,0.1)',
-                color: 'white',
-                border: '1px solid ' + (ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0 ? '#a31537' : '#374151'),
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0 ? '600' : '400'
-              }}
+              className={`filter-button ${ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0 ? 'active' : ''}`}
+              aria-pressed={ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0}
             >
               0 (Unknown)
             </button>
@@ -621,16 +599,8 @@ function App() {
                 setRatingFilter(filter)
                 localStorage.setItem('ratingFilter', JSON.stringify(filter))
               }}
-              style={{
-                padding: '6px 12px',
-                background: ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3 ? '#a31537' : 'rgba(255,255,255,0.1)',
-                color: 'white',
-                border: '1px solid ' + (ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3 ? '#a31537' : '#374151'),
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3 ? '600' : '400'
-              }}
+              className={`filter-button ${ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3 ? 'active' : ''}`}
+              aria-pressed={ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3}
             >
               1-3 (Learning)
             </button>
@@ -640,16 +610,8 @@ function App() {
                 setRatingFilter(filter)
                 localStorage.setItem('ratingFilter', JSON.stringify(filter))
               }}
-              style={{
-                padding: '6px 12px',
-                background: ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7 ? '#a31537' : 'rgba(255,255,255,0.1)',
-                color: 'white',
-                border: '1px solid ' + (ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7 ? '#a31537' : '#374151'),
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7 ? '600' : '400'
-              }}
+              className={`filter-button ${ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7 ? 'active' : ''}`}
+              aria-pressed={ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7}
             >
               4-7 (Familiar)
             </button>
@@ -659,86 +621,42 @@ function App() {
                 setRatingFilter(filter)
                 localStorage.setItem('ratingFilter', JSON.stringify(filter))
               }}
-              style={{
-                padding: '6px 12px',
-                background: ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100 ? '#a31537' : 'rgba(255,255,255,0.1)',
-                color: 'white',
-                border: '1px solid ' + (ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100 ? '#a31537' : '#374151'),
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100 ? '600' : '400'
-              }}
+              className={`filter-button ${ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100 ? 'active' : ''}`}
+              aria-pressed={ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100}
             >
               8+ (Mastered)
             </button>
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+          <p className="filter-hint">
             {ratingFilter === null
               ? 'Showing all questions'
               : `Showing questions with level ${ratingFilter[0]}-${ratingFilter[1] === 100 ? '∞' : ratingFilter[1]}`}
-          </div>
+          </p>
         </div>
 
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>State Management</h3>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+          <div className="state-buttons">
             <button
               onClick={handleDownloadState}
-              className="text-button"
-              style={{
-                padding: '10px 16px',
-                background: 'transparent',
-                color: '#9ca3af',
-                border: '1px solid #374151',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#a31537'
-                e.currentTarget.style.color = '#f3f4f6'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#374151'
-                e.currentTarget.style.color = '#9ca3af'
-              }}
+              className="state-button"
+              aria-label="Download your progress and ratings as a file"
             >
               Download Progress
             </button>
             <button
               onClick={handleRestoreState}
-              className="text-button"
-              style={{
-                padding: '10px 16px',
-                background: 'transparent',
-                color: '#9ca3af',
-                border: '1px solid #374151',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#a31537'
-                e.currentTarget.style.color = '#f3f4f6'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#374151'
-                e.currentTarget.style.color = '#9ca3af'
-              }}
+              className="state-button"
+              aria-label="Restore progress and ratings from a file"
             >
               Restore Progress
             </button>
           </div>
-          <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginTop: '8px' }}>
+          <p className="state-hint">
             Save or load your ratings and progress
-          </div>
+          </p>
         </div>
       </div>
     </div>
@@ -800,6 +718,8 @@ function App() {
                 onMouseLeave={() => setShowTranslations(false)}
                 onTouchStart={() => setShowTranslations(true)}
                 onTouchEnd={() => setShowTranslations(false)}
+                aria-label="Hold to see English translations"
+                aria-pressed={showTranslations}
                 title="Hold to see translations"
               >
                 {showTranslations ? '👁️' : '👁️‍🗨️'}
@@ -823,7 +743,7 @@ function App() {
               )}
             </div>
 
-            <div className="options">
+            <div className="options" role="radiogroup" aria-label="Answer options">
               {shuffledOptions.map((option, index) => {
                 let className = 'option-button'
 
@@ -843,7 +763,10 @@ function App() {
                     key={index}
                     className={className}
                     onClick={() => handleOptionClick(index)}
-                    style={canAdvance ? { cursor: 'pointer' } : undefined}
+                    role="radio"
+                    aria-checked={index === selectedOption}
+                    aria-label={`Option ${index + 1}: ${showTranslations && option.textEn ? option.textEn : option.text}`}
+                    disabled={answered && !canAdvance}
                   >
                     {showTranslations && option.textEn ? option.textEn : option.text}
                     {canAdvance && <span className="next-hint"> → Click to continue</span>}
@@ -861,156 +784,94 @@ function App() {
                 )}
 
                 {/* Knowledge Level Display */}
-                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>Knowledge level:</span>
-                    <div style={{
-                      fontSize: '1.5rem',
-                      fontWeight: '600',
-                      color: currentQuestionRating === 0 ? '#9ca3af' : '#10b981',
-                      minWidth: '32px',
-                      textAlign: 'center'
-                    }}>
+                <div className="rating-container">
+                  <div className="rating-row">
+                    <span className="rating-label">Knowledge level:</span>
+                    <div
+                      className="rating-value"
+                      style={{ color: currentQuestionRating === 0 ? '#9ca3af' : '#10b981' }}
+                      aria-label={`Current knowledge level: ${currentQuestionRating} out of 10`}
+                    >
                       {currentQuestionRating}
                     </div>
                     <button
                       onClick={() => setShowRatingUI(!showRatingUI)}
-                      style={{
-                        background: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '4px',
-                        padding: '4px 12px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        color: 'white',
-                        opacity: 0.7
-                      }}
+                      className="rating-button"
+                      aria-label={showRatingUI ? 'Close rating adjustment' : 'Adjust knowledge level'}
+                      aria-expanded={showRatingUI}
                     >
                       {showRatingUI ? 'Close' : 'Adjust'}
                     </button>
                   </div>
 
                   {showRatingUI && (
-                    <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.75rem', marginBottom: '8px', opacity: 0.7 }}>
+                    <div className="rating-picker">
+                      <div className="rating-picker-label">
                         Set knowledge level manually:
                       </div>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div className="rating-buttons">
                         {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                           <button
                             key={level}
                             onClick={() => handleRatingSelect(level)}
-                            style={{
-                              background: level === currentQuestionRating ? '#a31537' : 'rgba(255,255,255,0.1)',
-                              border: level === currentQuestionRating ? '2px solid #a31537' : '1px solid rgba(255,255,255,0.2)',
-                              borderRadius: '6px',
-                              width: '40px',
-                              height: '40px',
-                              cursor: 'pointer',
-                              fontSize: '1rem',
-                              fontWeight: level === currentQuestionRating ? '600' : '400',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (level !== currentQuestionRating) {
-                                e.currentTarget.style.background = 'rgba(163, 21, 55, 0.3)'
-                                e.currentTarget.style.borderColor = '#a31537'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (level !== currentQuestionRating) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
-                              }
-                            }}
+                            className={`rating-number-button ${level === currentQuestionRating ? 'active' : ''}`}
+                            aria-label={`Set knowledge level to ${level}`}
+                            aria-pressed={level === currentQuestionRating}
                           >
                             {level}
                           </button>
                         ))}
                       </div>
-                      <div style={{ fontSize: '0.65rem', marginTop: '8px', opacity: 0.5 }}>
+                      <div className="rating-hint">
                         0 = don't know, higher = better knowledge
                       </div>
                     </div>
                   )}
 
                   {/* Self-Rating Display */}
-                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>Your self-rating:</span>
-                      <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: '600',
-                        color: currentSelfRating === 0 ? '#9ca3af' : '#3b82f6',
-                        minWidth: '32px',
-                        textAlign: 'center'
-                      }}>
+                  <div className="rating-container">
+                    <div className="rating-row">
+                      <span className="rating-label">Your self-rating:</span>
+                      <div
+                        className="rating-value"
+                        style={{ color: currentSelfRating === 0 ? '#9ca3af' : '#3b82f6' }}
+                        aria-label={`Current confidence level: ${currentSelfRating} out of 10`}
+                      >
                         {currentSelfRating}
                       </div>
                       <button
                         onClick={() => setShowSelfRatingUI(!showSelfRatingUI)}
-                        style={{
-                          background: 'rgba(255,255,255,0.1)',
-                          border: '1px solid rgba(255,255,255,0.2)',
-                          borderRadius: '4px',
-                          padding: '4px 12px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          color: 'white',
-                          opacity: 0.7
-                        }}
+                        className="rating-button"
+                        aria-label={showSelfRatingUI ? 'Close self-rating' : 'Rate your confidence'}
+                        aria-expanded={showSelfRatingUI}
                       >
                         {showSelfRatingUI ? 'Close' : 'Rate'}
                       </button>
                     </div>
 
                     {showSelfRatingUI && (
-                      <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.75rem', marginBottom: '8px', opacity: 0.7 }}>
+                      <div className="rating-picker">
+                        <div className="rating-picker-label">
                           How confident are you with this question?
                         </div>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div className="rating-buttons">
                           {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                             <button
                               key={level}
                               onClick={() => handleSelfRatingSelect(level)}
+                              className={`rating-number-button ${level === currentSelfRating ? 'active' : ''}`}
                               style={{
-                                background: level === currentSelfRating ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-                                border: level === currentSelfRating ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
-                                borderRadius: '6px',
-                                width: '40px',
-                                height: '40px',
-                                cursor: 'pointer',
-                                fontSize: '1rem',
-                                fontWeight: level === currentSelfRating ? '600' : '400',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                transition: 'all 0.15s'
+                                background: level === currentSelfRating ? '#3b82f6' : undefined,
+                                borderColor: level === currentSelfRating ? '#3b82f6' : undefined
                               }}
-                              onMouseEnter={(e) => {
-                                if (level !== currentSelfRating) {
-                                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'
-                                  e.currentTarget.style.borderColor = '#3b82f6'
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (level !== currentSelfRating) {
-                                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
-                                }
-                              }}
+                              aria-label={`Set confidence level to ${level}`}
+                              aria-pressed={level === currentSelfRating}
                             >
                               {level}
                             </button>
                           ))}
                         </div>
-                        <div style={{ fontSize: '0.65rem', marginTop: '8px', opacity: 0.5 }}>
+                        <div className="rating-hint">
                           0 = not confident, 10 = very confident
                         </div>
                       </div>
@@ -1027,13 +888,14 @@ function App() {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       {renderSettingsPanel()}
-      <div className="app">
-        <div className="header">
+      <main className="app" role="main" id="main-content">
+        <header className="header">
           <h1>Indfødsretsprøven</h1>
-        </div>
+        </header>
         {renderMainContent()}
-      </div>
+      </main>
     </>
   )
 }
