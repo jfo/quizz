@@ -1,4 +1,5 @@
 import { Question, Stats, QuizzesBySection, AnswerResponse } from './api';
+import { loadQuestionStates, calculateNeedScore } from './questionState';
 
 // Types from backend
 interface Quiz {
@@ -19,106 +20,13 @@ interface Section {
 export interface IQuestionManager {
   getSections(): Promise<string[]>;
   getQuizzes(): Promise<QuizzesBySection[]>;
-  getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, onlyDue?: boolean): Promise<Question>;
+  getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean): Promise<Question>;
   submitAnswer(questionId: string, isCorrect: boolean, selectedOption: string, responseTimeMs?: number): Promise<AnswerResponse>;
   getStats(sections?: string[], quizzes?: string[], timeframeDays?: number): Promise<Stats>;
   initialize(): Promise<void>;
 }
 
-// Backend implementation (uses API)
-export class BackendQuestionManager implements IQuestionManager {
-  private readonly API_BASE = '/api';
-
-  async initialize(): Promise<void> {
-    // No initialization needed for backend mode
-  }
-
-  async getSections(): Promise<string[]> {
-    const response = await fetch(`${this.API_BASE}/sections`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch sections');
-    }
-    return response.json();
-  }
-
-  async getQuizzes(): Promise<QuizzesBySection[]> {
-    const response = await fetch(`${this.API_BASE}/quizzes`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch quizzes');
-    }
-    return response.json();
-  }
-
-  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, onlyDue?: boolean): Promise<Question> {
-    const response = await fetch(`${this.API_BASE}/questions/next`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sections: sections && sections.length > 0 ? sections : undefined,
-        quizzes: quizzes && quizzes.length > 0 ? quizzes : undefined,
-        shuffleMode: shuffleMode || false,
-        onlyDue: onlyDue || false,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const error: any = new Error(errorData.message || 'Failed to fetch question');
-      error.isNoDue = errorData.error === 'No questions due';
-      throw error;
-    }
-    return response.json();
-  }
-
-  async submitAnswer(
-    questionId: string,
-    isCorrect: boolean,
-    selectedOption: string,
-    responseTimeMs?: number
-  ): Promise<AnswerResponse> {
-    const response = await fetch(`${this.API_BASE}/answers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        questionId,
-        isCorrect,
-        selectedOption,
-        responseTimeMs,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to submit answer');
-    }
-
-    return response.json();
-  }
-
-  async getStats(sections?: string[], quizzes?: string[], timeframeDays?: number): Promise<Stats> {
-    const response = await fetch(`${this.API_BASE}/stats`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sections: sections && sections.length > 0 ? sections : undefined,
-        quizzes: quizzes && quizzes.length > 0 ? quizzes : undefined,
-        timeframeDays: timeframeDays !== undefined ? timeframeDays : 7,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch stats');
-    }
-    return response.json();
-  }
-}
-
-// Frontend implementation (loads questions locally, no stats)
+// Local frontend implementation (loads questions locally)
 export class LocalQuestionManager implements IQuestionManager {
   private questionsData: Section[] = [];
   private currentQuestionIndex: number = 0;
@@ -173,7 +81,7 @@ export class LocalQuestionManager implements IQuestionManager {
     return allQuestions;
   }
 
-  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, _onlyDue?: boolean): Promise<Question> {
+  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean): Promise<Question> {
     const allQuestions = this.getAllQuestions(sections, quizzes);
 
     if (allQuestions.length === 0) {
@@ -185,9 +93,16 @@ export class LocalQuestionManager implements IQuestionManager {
                          this.currentQuestionList.length !== allQuestions.length;
 
     if (needsRebuild) {
-      this.currentQuestionList = shuffleMode ?
-        this.shuffleArray([...allQuestions]) :
-        [...allQuestions];
+      if (mostNeededMode) {
+        // Sort by need score (highest first)
+        this.currentQuestionList = this.sortByNeed([...allQuestions]);
+      } else if (shuffleMode) {
+        // Shuffle randomly
+        this.currentQuestionList = this.shuffleArray([...allQuestions]);
+      } else {
+        // Sequential order
+        this.currentQuestionList = [...allQuestions];
+      }
       this.currentQuestionIndex = 0;
     }
 
@@ -198,6 +113,17 @@ export class LocalQuestionManager implements IQuestionManager {
     this.currentQuestionIndex = (this.currentQuestionIndex + 1) % this.currentQuestionList.length;
 
     return question;
+  }
+
+  private sortByNeed(questions: Question[]): Question[] {
+    const states = loadQuestionStates();
+    return questions.sort((a, b) => {
+      const stateA = states[a.id] || { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 };
+      const stateB = states[b.id] || { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 };
+      const scoreA = calculateNeedScore(stateA);
+      const scoreB = calculateNeedScore(stateB);
+      return scoreB - scoreA; // Higher score = more needed = earlier in list
+    });
   }
 
   private shuffleArray<T>(array: T[]): T[] {
@@ -253,7 +179,7 @@ export class LocalQuestionManager implements IQuestionManager {
   }
 }
 
-// Factory function to create the appropriate manager
-export function createQuestionManager(useBackend: boolean): IQuestionManager {
-  return useBackend ? new BackendQuestionManager() : new LocalQuestionManager();
+// Factory function to create the manager
+export function createQuestionManager(): IQuestionManager {
+  return new LocalQuestionManager();
 }

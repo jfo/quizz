@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, setBackendMode } from './api'
+import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager } from './api'
+import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState } from './questionState'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -17,17 +18,13 @@ function App() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [shuffledOptions, setShuffledOptions] = useState<QuestionOption[]>([])
   const [shuffleMode, setShuffleMode] = useState(false)
+  const [mostNeededMode, setMostNeededMode] = useState(false)
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
-  const [questionStrength, setQuestionStrength] = useState<{ level: string; color: string; intervalDays: number } | null>(null)
-  const [timeframeDays, setTimeframeDays] = useState(7)
-  const [onlyDueMode, setOnlyDueMode] = useState(true)
-  const [exploratoryMode, setExploratoryMode] = useState(false)
-  const [useBackendStats, setUseBackendStats] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const [showChapters, setShowChapters] = useState(true)
   const [showOtherTopics, setShowOtherTopics] = useState(false)
-  const [questionSection, setQuestionSection] = useState<string>('')
+  const [showRatingUI, setShowRatingUI] = useState(false)
+  const [currentQuestionRating, setCurrentQuestionRating] = useState(0)
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -51,22 +48,21 @@ function App() {
 
       const sections = selectedSections.length > 0 ? selectedSections : undefined
       const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
-      const nextQuestion = await getNextQuestion(sections, quizzes, shuffleMode, onlyDueMode)
+      const nextQuestion = await getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode)
       setQuestion(nextQuestion)
       setShuffledOptions(shuffleArray(nextQuestion.options))
       setSelectedOption(null)
       setAnswered(false)
       setStartTime(Date.now())
       setShowTranslations(false)
-      setQuestionStrength(null)
+      setShowRatingUI(false)
+
+      // Load current rating for this question
+      const state = getQuestionState(nextQuestion.id)
+      setCurrentQuestionRating(state.rating)
     } catch (err: any) {
-      if (err.isNoDue) {
-        setError(err.message)
-        setQuestion(null)
-      } else {
-        setError('Failed to load question. Make sure the backend is running.')
-        console.error(err)
-      }
+      setError('Failed to load question.')
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -81,7 +77,7 @@ function App() {
 
       const sections = selectedSections.length > 0 ? selectedSections : undefined
       const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
-      const currentStats = await getStats(sections, quizzes, timeframeDays)
+      const currentStats = await getStats(sections, quizzes, 0)
       setStats(currentStats)
     } catch (err) {
       console.error('Failed to load stats:', err)
@@ -134,14 +130,9 @@ function App() {
         setShuffleMode(savedShuffleMode === 'true')
       }
 
-      const savedOnlyDueMode = localStorage.getItem('onlyDueMode')
-      if (savedOnlyDueMode !== null) {
-        setOnlyDueMode(savedOnlyDueMode === 'true')
-      }
-
-      const savedExploratoryMode = localStorage.getItem('exploratoryMode')
-      if (savedExploratoryMode !== null) {
-        setExploratoryMode(savedExploratoryMode === 'true')
+      const savedMostNeededMode = localStorage.getItem('mostNeededMode')
+      if (savedMostNeededMode) {
+        setMostNeededMode(savedMostNeededMode === 'true')
       }
     } catch (err) {
       console.error('Failed to load sections:', err)
@@ -154,12 +145,8 @@ function App() {
       try {
         setIsInitializing(true)
 
-        // Always default to frontend-only mode (no backend)
-        const shouldUseBackend = false
-        setUseBackendStats(shouldUseBackend)
-
         // Initialize the question manager
-        await initializeQuestionManager(shouldUseBackend)
+        await initializeQuestionManager()
 
         // Load sections and quizzes
         await loadSections()
@@ -184,7 +171,7 @@ function App() {
         console.error('Failed to load data:', err)
       })
     }
-  }, [selectedSections, selectedQuizzes, shuffleMode, timeframeDays, onlyDueMode, exploratoryMode, isInitializing])
+  }, [selectedSections, selectedQuizzes, shuffleMode, mostNeededMode, isInitializing])
 
   const handleOptionClick = async (index: number) => {
     if (!question) return
@@ -202,7 +189,6 @@ function App() {
     setAnswered(true)
 
     const isCorrect = shuffledOptions[index].correct
-    const responseTimeMs = Date.now() - startTime
 
     // Update session stats
     setSessionStats(prev => ({
@@ -210,21 +196,23 @@ function App() {
       total: prev.total + 1
     }))
 
-    // Only track answers if using backend and not in exploratory mode
-    if (useBackendStats && !exploratoryMode) {
-      try {
-        const response = await submitAnswer(
-          question.id,
-          isCorrect,
-          shuffledOptions[index].text,
-          responseTimeMs
-        )
-        setQuestionStrength(response.strength)
-        await loadStats()
-      } catch (err) {
-        console.error('Failed to submit answer:', err)
+    // Auto-update rating based on answer
+    if (question) {
+      const updatedState = updateRatingAfterAnswer(question.id, isCorrect)
+      setCurrentQuestionRating(updatedState.rating)
+
+      // Show rating UI if question is unrated
+      if (updatedState.rating === 0) {
+        setShowRatingUI(true)
       }
     }
+  }
+
+  const handleRatingSelect = (rating: number) => {
+    if (!question) return
+    const updatedState = setQuestionRating(question.id, rating)
+    setCurrentQuestionRating(updatedState.rating)
+    setShowRatingUI(false)
   }
 
   const toggleSection = (section: string) => {
@@ -284,24 +272,65 @@ function App() {
     setShuffleMode(prev => {
       const newValue = !prev
       localStorage.setItem('shuffleMode', String(newValue))
+      // Turn off most needed mode when shuffling
+      if (newValue) {
+        setMostNeededMode(false)
+        localStorage.setItem('mostNeededMode', 'false')
+      }
       return newValue
     })
   }
 
-  const toggleOnlyDueMode = () => {
-    setOnlyDueMode(prev => {
+  const toggleMostNeededMode = () => {
+    setMostNeededMode(prev => {
       const newValue = !prev
-      localStorage.setItem('onlyDueMode', String(newValue))
+      localStorage.setItem('mostNeededMode', String(newValue))
+      // Turn off shuffle mode when using most needed
+      if (newValue) {
+        setShuffleMode(false)
+        localStorage.setItem('shuffleMode', 'false')
+      }
       return newValue
     })
   }
 
-  const toggleExploratoryMode = () => {
-    setExploratoryMode(prev => {
-      const newValue = !prev
-      localStorage.setItem('exploratoryMode', String(newValue))
-      return newValue
-    })
+  const handleDownloadState = () => {
+    const stateJson = exportState()
+    const blob = new Blob([stateJson], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `quizz-state-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleRestoreState = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'application/json'
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0]
+      if (file) {
+        try {
+          const text = await file.text()
+          const success = importState(text)
+          if (success) {
+            alert('State restored successfully!')
+            // Reload question to reflect new state
+            loadQuestion()
+          } else {
+            alert('Failed to restore state. Invalid file format.')
+          }
+        } catch (err) {
+          console.error('Failed to restore state:', err)
+          alert('Failed to restore state.')
+        }
+      }
+    }
+    input.click()
   }
 
   const jumpToSection = async (section: string) => {
@@ -314,110 +343,81 @@ function App() {
     localStorage.setItem('selectedQuizzes', JSON.stringify(sectionQuizUrls))
   }
 
-  const toggleBackendStats = async () => {
-    try {
-      const newValue = !useBackendStats
-
-      // Reinitialize with new mode
-      setLoading(true)
-      await setBackendMode(newValue)
-
-      // Update state after reinitialization
-      setUseBackendStats(newValue)
-
-      // If switching to frontend-only, clear exploratory mode
-      if (!newValue) {
-        setExploratoryMode(false)
-        localStorage.setItem('exploratoryMode', 'false')
-      }
-
-      // Reload sections/quizzes and first question
-      await loadSections()
-      setLoading(false)
-    } catch (err) {
-      console.error('Failed to switch mode:', err)
-      setError('Failed to switch mode. Please refresh the page.')
-      setLoading(false)
-    }
-  }
-
   const renderSettingsPanel = () => (
     <div className="settings-panel">
       <div className="settings-header">
         <h2>Question Selection</h2>
       </div>
       <div className="settings-content">
-        {useBackendStats && (
-          <div className="settings-section">
-            <div className="settings-section-header">
-              <h3>Study Mode</h3>
-            </div>
-            <label className="checkbox-item">
-              <input
-                type="checkbox"
-                checked={exploratoryMode}
-                onChange={toggleExploratoryMode}
-              />
-              <span>Exploratory mode (answers not tracked)</span>
-            </label>
-            {exploratoryMode && (
-              <div style={{ fontSize: '0.8125rem', color: '#f59e0b', marginTop: '8px', paddingLeft: '38px' }}>
-                Practice mode - your progress won't be saved
-              </div>
-            )}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Question Order</h3>
           </div>
-        )}
+          <label className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={mostNeededMode}
+              onChange={toggleMostNeededMode}
+            />
+            <span>Most needed order (prioritize hard questions)</span>
+          </label>
+          <label className="checkbox-item" style={{ marginTop: '8px' }}>
+            <input
+              type="checkbox"
+              checked={shuffleMode}
+              onChange={toggleShuffleMode}
+            />
+            <span>Shuffle questions</span>
+          </label>
+          <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+            {mostNeededMode
+              ? 'Questions ordered by difficulty and performance'
+              : shuffleMode
+                ? 'Questions in random order'
+                : 'Questions in sequential order'}
+          </div>
+        </div>
 
-        {useBackendStats && (
-          <div className="settings-section">
-            <div className="settings-section-header">
-              <h3>Question Order</h3>
-            </div>
-            <label className="checkbox-item">
-              <input
-                type="checkbox"
-                checked={shuffleMode}
-                onChange={toggleShuffleMode}
-                disabled={!exploratoryMode && onlyDueMode}
-              />
-              <span>Shuffle questions (random order)</span>
-            </label>
-            {!shuffleMode && !exploratoryMode && (
-              <>
-                <label className="checkbox-item" style={{ marginTop: '8px' }}>
-                  <input
-                    type="checkbox"
-                    checked={onlyDueMode}
-                    onChange={toggleOnlyDueMode}
-                  />
-                  <span>Only show questions due for review today</span>
-                </label>
-                <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
-                  Using spaced repetition algorithm
-                </div>
-              </>
-            )}
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>State Management</h3>
           </div>
-        )}
-
-        {!useBackendStats && (
-          <div className="settings-section">
-            <div className="settings-section-header">
-              <h3>Question Order</h3>
-            </div>
-            <label className="checkbox-item">
-              <input
-                type="checkbox"
-                checked={shuffleMode}
-                onChange={toggleShuffleMode}
-              />
-              <span>Shuffle questions</span>
-            </label>
-            <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
-              {shuffleMode ? 'Questions in random order' : 'Questions in sequential order'}
-            </div>
+          <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+            <button
+              onClick={handleDownloadState}
+              style={{
+                padding: '8px 16px',
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}
+            >
+              Download Progress
+            </button>
+            <button
+              onClick={handleRestoreState}
+              style={{
+                padding: '8px 16px',
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}
+            >
+              Restore Progress
+            </button>
           </div>
-        )}
+          <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px' }}>
+            Save your ratings and progress to a file
+          </div>
+        </div>
 
         <div className="settings-section">
           <div className="settings-section-header">
@@ -593,52 +593,6 @@ function App() {
             </div>
           </div>
         </div>
-
-        {import.meta.env.DEV && (
-          <div className="settings-section" style={{ borderTop: '1px solid #374151', paddingTop: '16px', marginTop: '16px' }}>
-            <button
-              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#9ca3af',
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '0',
-                width: '100%',
-                textAlign: 'left'
-              }}
-            >
-              <span>{showAdvancedSettings ? '▼' : '▶'}</span>
-              <span>Advanced Settings</span>
-            </button>
-
-            {showAdvancedSettings && (
-              <div style={{ marginTop: '12px' }}>
-                <label className="checkbox-item">
-                  <input
-                    type="checkbox"
-                    checked={useBackendStats}
-                    onChange={toggleBackendStats}
-                  />
-                  <span>Use backend for stats & spaced repetition</span>
-                </label>
-                {useBackendStats ? (
-                  <div style={{ fontSize: '0.8125rem', color: '#3b82f6', marginTop: '8px', paddingLeft: '38px' }}>
-                    Full mode - tracks progress with spaced repetition
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '0.8125rem', color: '#10b981', marginTop: '8px', paddingLeft: '38px' }}>
-                    Simple mode - all questions loaded locally, no tracking
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )
@@ -670,47 +624,7 @@ function App() {
 
     return (
       <>
-        {useBackendStats && stats && (
-          <div className="stats-bar">
-            <div className="stat">
-              <div className="stat-value">{stats.studiedQuestions}/{stats.totalQuestions}</div>
-              <div className="stat-label">Studied</div>
-            </div>
-            <div className="stat">
-              <div className="stat-value">{stats.overallAccuracy.toFixed(1)}%</div>
-              <div className="stat-label">
-                <select
-                  value={timeframeDays}
-                  onChange={(e) => setTimeframeDays(Number(e.target.value))}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    fontSize: '0.75rem',
-                    color: '#9ca3af',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    cursor: 'pointer',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="1">Today</option>
-                  <option value="7">Past Week</option>
-                  <option value="30">Past Month</option>
-                  <option value="90">Past 3 Months</option>
-                  <option value="0">All Time</option>
-                </select>
-              </div>
-            </div>
-            <div className="stat">
-              <div className="stat-value">
-                {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%
-              </div>
-              <div className="stat-label">Session ({sessionStats.total})</div>
-            </div>
-          </div>
-        )}
-
-        {!useBackendStats && stats && (
+        {stats && (
           <div className="stats-bar">
             <div className="stat">
               <div className="stat-value">{stats.totalQuestions}</div>
@@ -798,15 +712,106 @@ function App() {
                 ) : (
                   <strong>Incorrect. Click the correct answer to continue.</strong>
                 )}
-                {useBackendStats && questionStrength && !exploratoryMode && (
-                  <div className="strength-indicator" style={{ marginTop: '12px', fontSize: '0.875rem' }}>
-                    <span style={{ color: questionStrength.color, fontWeight: '600' }}>
-                      {questionStrength.level}
-                    </span>
-                    {' • '}
-                    Next review in {questionStrength.intervalDays} day{questionStrength.intervalDays !== 1 ? 's' : ''}
-                  </div>
-                )}
+
+                {/* Rating Display/UI */}
+                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  {!showRatingUI && currentQuestionRating > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>Difficulty:</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[1, 2, 3, 4, 5].map(rating => (
+                          <button
+                            key={rating}
+                            onClick={() => handleRatingSelect(rating)}
+                            style={{
+                              background: rating <= currentQuestionRating ? '#fbbf24' : 'rgba(255,255,255,0.1)',
+                              border: 'none',
+                              borderRadius: '4px',
+                              width: '32px',
+                              height: '32px',
+                              cursor: 'pointer',
+                              fontSize: '1rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            {rating <= currentQuestionRating ? '★' : '☆'}
+                          </button>
+                        ))}
+                      </div>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '4px' }}>
+                        (click to change)
+                      </span>
+                    </div>
+                  )}
+
+                  {showRatingUI && (
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.875rem', marginBottom: '12px', opacity: 0.9 }}>
+                        How hard was this question?
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                        {[1, 2, 3, 4, 5].map(rating => (
+                          <button
+                            key={rating}
+                            onClick={() => handleRatingSelect(rating)}
+                            style={{
+                              background: 'rgba(255,255,255,0.1)',
+                              border: '2px solid rgba(255,255,255,0.2)',
+                              borderRadius: '8px',
+                              width: '48px',
+                              height: '48px',
+                              cursor: 'pointer',
+                              fontSize: '1.25rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexDirection: 'column',
+                              color: 'white',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#fbbf24'
+                              e.currentTarget.style.borderColor = '#fbbf24'
+                              e.currentTarget.style.transform = 'scale(1.1)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                              e.currentTarget.style.transform = 'scale(1)'
+                            }}
+                          >
+                            <div style={{ fontSize: '1.25rem' }}>★</div>
+                            <div style={{ fontSize: '0.625rem', marginTop: '2px' }}>{rating}</div>
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', marginTop: '12px', opacity: 0.6 }}>
+                        1 = easiest, 5 = hardest
+                      </div>
+                    </div>
+                  )}
+
+                  {!showRatingUI && currentQuestionRating === 0 && (
+                    <div style={{ textAlign: 'center' }}>
+                      <button
+                        onClick={() => setShowRatingUI(true)}
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          borderRadius: '6px',
+                          padding: '8px 16px',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          color: 'white'
+                        }}
+                      >
+                        Rate this question
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -820,22 +825,7 @@ function App() {
       {renderSettingsPanel()}
       <div className="app">
         <div className="header">
-          <h1>
-            Indfødsretsprøven
-            {exploratoryMode && (
-              <span style={{
-                fontSize: '0.75rem',
-                fontWeight: '400',
-                color: '#fef2f2',
-                marginLeft: '12px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                opacity: 0.9
-              }}>
-                Exploratory Mode
-              </span>
-            )}
-          </h1>
+          <h1>Indfødsretsprøven</h1>
         </div>
         {renderMainContent()}
       </div>
