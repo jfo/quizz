@@ -862,14 +862,14 @@ function App() {
                     <button
                       onClick={() => setShowRatingUI(!showRatingUI)}
                       style={{
-                        background: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.2)',
+                        background: 'white',
+                        border: '2px solid #d1d5db',
                         borderRadius: '4px',
                         padding: '4px 12px',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
-                        color: 'white',
-                        opacity: 0.7
+                        color: '#374151',
+                        fontWeight: '500'
                       }}
                     >
                       {showRatingUI ? 'Close' : 'Adjust'}
@@ -887,30 +887,30 @@ function App() {
                             key={level}
                             onClick={() => handleRatingSelect(level)}
                             style={{
-                              background: level === currentQuestionRating ? '#a31537' : 'rgba(255,255,255,0.1)',
-                              border: level === currentQuestionRating ? '2px solid #a31537' : '1px solid rgba(255,255,255,0.2)',
+                              background: level === currentQuestionRating ? '#a31537' : 'white',
+                              border: level === currentQuestionRating ? '2px solid #a31537' : '2px solid #d1d5db',
                               borderRadius: '6px',
                               width: '40px',
                               height: '40px',
                               cursor: 'pointer',
                               fontSize: '1rem',
-                              fontWeight: level === currentQuestionRating ? '600' : '400',
+                              fontWeight: level === currentQuestionRating ? '600' : '500',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: 'white',
+                              color: level === currentQuestionRating ? 'white' : '#374151',
                               transition: 'all 0.15s'
                             }}
                             onMouseEnter={(e) => {
                               if (level !== currentQuestionRating) {
-                                e.currentTarget.style.background = 'rgba(163, 21, 55, 0.3)'
+                                e.currentTarget.style.background = '#fef2f2'
                                 e.currentTarget.style.borderColor = '#a31537'
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (level !== currentQuestionRating) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                                e.currentTarget.style.background = 'white'
+                                e.currentTarget.style.borderColor = '#d1d5db'
                               }
                             }}
                           >
@@ -940,14 +940,14 @@ function App() {
                       <button
                         onClick={() => setShowSelfRatingUI(!showSelfRatingUI)}
                         style={{
-                          background: 'rgba(255,255,255,0.1)',
-                          border: '1px solid rgba(255,255,255,0.2)',
+                          background: 'white',
+                          border: '2px solid #d1d5db',
                           borderRadius: '4px',
                           padding: '4px 12px',
                           cursor: 'pointer',
                           fontSize: '0.75rem',
-                          color: 'white',
-                          opacity: 0.7
+                          color: '#374151',
+                          fontWeight: '500'
                         }}
                       >
                         {showSelfRatingUI ? 'Close' : 'Rate'}
@@ -965,30 +965,30 @@ function App() {
                               key={level}
                               onClick={() => handleSelfRatingSelect(level)}
                               style={{
-                                background: level === currentSelfRating ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-                                border: level === currentSelfRating ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
+                                background: level === currentSelfRating ? '#3b82f6' : 'white',
+                                border: level === currentSelfRating ? '2px solid #3b82f6' : '2px solid #d1d5db',
                                 borderRadius: '6px',
                                 width: '40px',
                                 height: '40px',
                                 cursor: 'pointer',
                                 fontSize: '1rem',
-                                fontWeight: level === currentSelfRating ? '600' : '400',
+                                fontWeight: level === currentSelfRating ? '600' : '500',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: 'white',
+                                color: level === currentSelfRating ? 'white' : '#374151',
                                 transition: 'all 0.15s'
                               }}
                               onMouseEnter={(e) => {
                                 if (level !== currentSelfRating) {
-                                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'
+                                  e.currentTarget.style.background = '#eff6ff'
                                   e.currentTarget.style.borderColor = '#3b82f6'
                                 }
                               }}
                               onMouseLeave={(e) => {
                                 if (level !== currentSelfRating) {
-                                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                                  e.currentTarget.style.background = 'white'
+                                  e.currentTarget.style.borderColor = '#d1d5db'
                                 }
                               }}
                             >
