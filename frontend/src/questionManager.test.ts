@@ -149,9 +149,9 @@ describe('LocalQuestionManager', () => {
 
       // Set up ratings: q1=easy(5), q2=medium(3), q3=hard(1)
       const states: QuestionStates = {
-        'q1': { rating: 5, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
-        'q2': { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
-        'q3': { rating: 1, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
+        'q1': { rating: 5, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
+        'q2': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
+        'q3': { rating: 1, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
       }
       saveQuestionStates(states)
 
@@ -170,9 +170,9 @@ describe('LocalQuestionManager', () => {
 
       // Set up states: q1=many incorrect, q2=few incorrect
       const states: QuestionStates = {
-        'q1': { rating: 3, correctStreak: 0, incorrectCount: 5, lastAnswered: 0 },
-        'q2': { rating: 3, correctStreak: 0, incorrectCount: 1, lastAnswered: 0 },
-        'q3': { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
+        'q1': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 5, lastAnswered: 0 },
+        'q2': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 1, lastAnswered: 0 },
+        'q3': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
       }
       saveQuestionStates(states)
 
@@ -187,9 +187,9 @@ describe('LocalQuestionManager', () => {
 
       // Set up states: q1=long streak, q2=no streak
       const states: QuestionStates = {
-        'q1': { rating: 3, correctStreak: 10, incorrectCount: 0, lastAnswered: 0 },
-        'q2': { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
-        'q3': { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
+        'q1': { rating: 3, selfRating: 0, correctStreak: 10, incorrectCount: 0, lastAnswered: 0 },
+        'q2': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
+        'q3': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
       }
       saveQuestionStates(states)
 
@@ -209,9 +209,9 @@ describe('LocalQuestionManager', () => {
 
       // Set up states: q1=recently answered, q2=long time ago
       const states: QuestionStates = {
-        'q1': { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: now },
-        'q2': { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: weekAgo },
-        'q3': { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
+        'q1': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: now },
+        'q2': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: weekAgo },
+        'q3': { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 },
       }
       saveQuestionStates(states)
 
@@ -226,9 +226,9 @@ describe('LocalQuestionManager', () => {
 
       // Set up mixed states
       const states: QuestionStates = {
-        'q1': { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // unknown
-        'q2': { rating: 5, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // well known
-        'q3': { rating: 1, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // less known
+        'q1': { rating: 0, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // unknown
+        'q2': { rating: 5, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // well known
+        'q3': { rating: 1, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }, // less known
       }
       saveQuestionStates(states)
 

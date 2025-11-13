@@ -21,8 +21,8 @@ describe('questionState', () => {
   describe('loadQuestionStates and saveQuestionStates', () => {
     it('should save and load question states', () => {
       const states: QuestionStates = {
-        'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
-        'q2': { rating: 5, correctStreak: 0, incorrectCount: 3, lastAnswered: 2000 },
+        'q1': { rating: 3, selfRating: 0, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
+        'q2': { rating: 5, selfRating: 0, correctStreak: 0, incorrectCount: 3, lastAnswered: 2000 },
       }
 
       saveQuestionStates(states)
@@ -48,6 +48,7 @@ describe('questionState', () => {
       const state = getQuestionState('newQuestion')
       expect(state).toEqual({
         rating: 0,
+        selfRating: 0,
         correctStreak: 0,
         incorrectCount: 0,
         lastAnswered: 0,
@@ -56,7 +57,7 @@ describe('questionState', () => {
 
     it('should return existing state for known question', () => {
       const states: QuestionStates = {
-        'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
+        'q1': { rating: 3, selfRating: 0, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
       }
       saveQuestionStates(states)
 
@@ -136,14 +137,14 @@ describe('questionState', () => {
 
   describe('calculateNeedScore', () => {
     it('should give high priority to unknown questions (rating 0)', () => {
-      const state = { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+      const state = { rating: 0, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
       const score = calculateNeedScore(state)
       expect(score).toBe(100) // Max score for unknown questions
     })
 
     it('should prioritize unknown questions with incorrect answers', () => {
-      const state1 = { rating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
-      const state2 = { rating: 0, correctStreak: 0, incorrectCount: 2, lastAnswered: 0 }
+      const state1 = { rating: 0, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+      const state2 = { rating: 0, selfRating: 0, correctStreak: 0, incorrectCount: 2, lastAnswered: 0 }
 
       const score1 = calculateNeedScore(state1)
       const score2 = calculateNeedScore(state2)
@@ -152,8 +153,8 @@ describe('questionState', () => {
     })
 
     it('should give higher priority to questions with lower knowledge (lower rating)', () => {
-      const wellKnown = { rating: 5, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
-      const lessKnown = { rating: 1, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+      const wellKnown = { rating: 5, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+      const lessKnown = { rating: 1, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
 
       const wellKnownScore = calculateNeedScore(wellKnown)
       const lessKnownScore = calculateNeedScore(lessKnown)
@@ -162,8 +163,8 @@ describe('questionState', () => {
     })
 
     it('should boost questions with many incorrect answers', () => {
-      const state1 = { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
-      const state2 = { rating: 3, correctStreak: 0, incorrectCount: 3, lastAnswered: 0 }
+      const state1 = { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+      const state2 = { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 3, lastAnswered: 0 }
 
       const score1 = calculateNeedScore(state1)
       const score2 = calculateNeedScore(state2)
@@ -172,8 +173,8 @@ describe('questionState', () => {
     })
 
     it('should reduce priority for questions with correct streaks', () => {
-      const state1 = { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
-      const state2 = { rating: 3, correctStreak: 5, incorrectCount: 0, lastAnswered: 0 }
+      const state1 = { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 }
+      const state2 = { rating: 3, selfRating: 0, correctStreak: 5, incorrectCount: 0, lastAnswered: 0 }
 
       const score1 = calculateNeedScore(state1)
       const score2 = calculateNeedScore(state2)
@@ -183,8 +184,8 @@ describe('questionState', () => {
 
     it('should boost questions not seen recently', () => {
       const now = Date.now()
-      const recent = { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: now }
-      const old = { rating: 3, correctStreak: 0, incorrectCount: 0, lastAnswered: now - (7 * 24 * 60 * 60 * 1000) } // 7 days ago
+      const recent = { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: now }
+      const old = { rating: 3, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: now - (7 * 24 * 60 * 60 * 1000) } // 7 days ago
 
       const recentScore = calculateNeedScore(recent)
       const oldScore = calculateNeedScore(old)
@@ -196,8 +197,8 @@ describe('questionState', () => {
   describe('exportState and importState', () => {
     it('should export state as JSON string', () => {
       const states: QuestionStates = {
-        'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
-        'q2': { rating: 5, correctStreak: 0, incorrectCount: 3, lastAnswered: 2000 },
+        'q1': { rating: 3, selfRating: 0, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
+        'q2': { rating: 5, selfRating: 0, correctStreak: 0, incorrectCount: 3, lastAnswered: 2000 },
       }
       saveQuestionStates(states)
 
@@ -209,7 +210,7 @@ describe('questionState', () => {
 
     it('should import valid state from JSON string', () => {
       const states: QuestionStates = {
-        'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
+        'q1': { rating: 3, selfRating: 0, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
       }
       const json = JSON.stringify(states)
 

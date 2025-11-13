@@ -20,7 +20,7 @@ interface Section {
 export interface IQuestionManager {
   getSections(): Promise<string[]>;
   getQuizzes(): Promise<QuizzesBySection[]>;
-  getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean): Promise<Question>;
+  getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question>;
   submitAnswer(questionId: string, isCorrect: boolean, selectedOption: string, responseTimeMs?: number): Promise<AnswerResponse>;
   getStats(sections?: string[], quizzes?: string[], timeframeDays?: number): Promise<Stats>;
   initialize(): Promise<void>;
@@ -81,11 +81,20 @@ export class LocalQuestionManager implements IQuestionManager {
     return allQuestions;
   }
 
-  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean): Promise<Question> {
-    const allQuestions = this.getAllQuestions(sections, quizzes);
+  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question> {
+    let allQuestions = this.getAllQuestions(sections, quizzes);
+
+    // Filter by rating range if specified
+    if (ratingRange) {
+      const states = loadQuestionStates();
+      allQuestions = allQuestions.filter(q => {
+        const state = states[q.id] || { rating: 0, selfRating: 0, correctStreak: 0, incorrectCount: 0, lastAnswered: 0 };
+        return state.rating >= ratingRange[0] && state.rating <= ratingRange[1];
+      });
+    }
 
     if (allQuestions.length === 0) {
-      throw new Error('No questions available');
+      throw new Error('No questions available with the selected filters');
     }
 
     // Check if we need to rebuild the question list (selections changed)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager } from './api'
-import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState } from './questionState'
+import { getQuestionState, setQuestionRating, setQuestionSelfRating, updateRatingAfterAnswer, exportState, importState } from './questionState'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -25,6 +25,9 @@ function App() {
   const [showOtherTopics, setShowOtherTopics] = useState(false)
   const [showRatingUI, setShowRatingUI] = useState(false)
   const [currentQuestionRating, setCurrentQuestionRating] = useState(0)
+  const [currentSelfRating, setCurrentSelfRating] = useState(0)
+  const [showSelfRatingUI, setShowSelfRatingUI] = useState(false)
+  const [ratingFilter, setRatingFilter] = useState<[number, number] | null>(null)
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -48,7 +51,7 @@ function App() {
 
       const sections = selectedSections.length > 0 ? selectedSections : undefined
       const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
-      const nextQuestion = await getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode)
+      const nextQuestion = await getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode, ratingFilter || undefined)
       setQuestion(nextQuestion)
       setShuffledOptions(shuffleArray(nextQuestion.options))
       setSelectedOption(null)
@@ -56,10 +59,12 @@ function App() {
       setStartTime(Date.now())
       setShowTranslations(false)
       setShowRatingUI(false)
+      setShowSelfRatingUI(false)
 
-      // Load current rating for this question
+      // Load current ratings for this question
       const state = getQuestionState(nextQuestion.id)
       setCurrentQuestionRating(state.rating)
+      setCurrentSelfRating(state.selfRating)
     } catch (err: any) {
       setError('Failed to load question.')
       console.error(err)
@@ -134,6 +139,16 @@ function App() {
       if (savedMostNeededMode) {
         setMostNeededMode(savedMostNeededMode === 'true')
       }
+
+      const savedRatingFilter = localStorage.getItem('ratingFilter')
+      if (savedRatingFilter) {
+        try {
+          const parsed = JSON.parse(savedRatingFilter)
+          setRatingFilter(parsed)
+        } catch {
+          // Ignore invalid filter
+        }
+      }
     } catch (err) {
       console.error('Failed to load sections:', err)
     }
@@ -171,7 +186,7 @@ function App() {
         console.error('Failed to load data:', err)
       })
     }
-  }, [selectedSections, selectedQuizzes, shuffleMode, mostNeededMode, isInitializing])
+  }, [selectedSections, selectedQuizzes, shuffleMode, mostNeededMode, ratingFilter, isInitializing])
 
   const handleOptionClick = async (index: number) => {
     if (!question) return
@@ -208,6 +223,13 @@ function App() {
     const updatedState = setQuestionRating(question.id, rating)
     setCurrentQuestionRating(updatedState.rating)
     setShowRatingUI(false)
+  }
+
+  const handleSelfRatingSelect = (rating: number) => {
+    if (!question) return
+    const updatedState = setQuestionSelfRating(question.id, rating)
+    setCurrentSelfRating(updatedState.selfRating)
+    setShowSelfRatingUI(false)
   }
 
   const toggleSection = (section: string) => {
@@ -550,6 +572,116 @@ function App() {
 
         <div className="settings-section">
           <div className="settings-section-header">
+            <h3>Knowledge Level Filter</h3>
+          </div>
+          <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '8px' }}>
+            Only show questions with knowledge level:
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+            <button
+              onClick={() => {
+                setRatingFilter(null)
+                localStorage.removeItem('ratingFilter')
+              }}
+              style={{
+                padding: '6px 12px',
+                background: ratingFilter === null ? '#a31537' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: '1px solid ' + (ratingFilter === null ? '#a31537' : '#374151'),
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: ratingFilter === null ? '600' : '400'
+              }}
+            >
+              All
+            </button>
+            <button
+              onClick={() => {
+                const filter: [number, number] = [0, 0]
+                setRatingFilter(filter)
+                localStorage.setItem('ratingFilter', JSON.stringify(filter))
+              }}
+              style={{
+                padding: '6px 12px',
+                background: ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0 ? '#a31537' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: '1px solid ' + (ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0 ? '#a31537' : '#374151'),
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: ratingFilter?.[0] === 0 && ratingFilter?.[1] === 0 ? '600' : '400'
+              }}
+            >
+              0 (Unknown)
+            </button>
+            <button
+              onClick={() => {
+                const filter: [number, number] = [1, 3]
+                setRatingFilter(filter)
+                localStorage.setItem('ratingFilter', JSON.stringify(filter))
+              }}
+              style={{
+                padding: '6px 12px',
+                background: ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3 ? '#a31537' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: '1px solid ' + (ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3 ? '#a31537' : '#374151'),
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: ratingFilter?.[0] === 1 && ratingFilter?.[1] === 3 ? '600' : '400'
+              }}
+            >
+              1-3 (Learning)
+            </button>
+            <button
+              onClick={() => {
+                const filter: [number, number] = [4, 7]
+                setRatingFilter(filter)
+                localStorage.setItem('ratingFilter', JSON.stringify(filter))
+              }}
+              style={{
+                padding: '6px 12px',
+                background: ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7 ? '#a31537' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: '1px solid ' + (ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7 ? '#a31537' : '#374151'),
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: ratingFilter?.[0] === 4 && ratingFilter?.[1] === 7 ? '600' : '400'
+              }}
+            >
+              4-7 (Familiar)
+            </button>
+            <button
+              onClick={() => {
+                const filter: [number, number] = [8, 100]
+                setRatingFilter(filter)
+                localStorage.setItem('ratingFilter', JSON.stringify(filter))
+              }}
+              style={{
+                padding: '6px 12px',
+                background: ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100 ? '#a31537' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: '1px solid ' + (ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100 ? '#a31537' : '#374151'),
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: ratingFilter?.[0] === 8 && ratingFilter?.[1] === 100 ? '600' : '400'
+              }}
+            >
+              8+ (Mastered)
+            </button>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+            {ratingFilter === null
+              ? 'Showing all questions'
+              : `Showing questions with level ${ratingFilter[0]}-${ratingFilter[1] === 100 ? '∞' : ratingFilter[1]}`}
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-header">
             <h3>State Management</h3>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
@@ -805,6 +937,85 @@ function App() {
                       </div>
                     </div>
                   )}
+
+                  {/* Self-Rating Display */}
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>Your self-rating:</span>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: '600',
+                        color: currentSelfRating === 0 ? '#9ca3af' : '#3b82f6',
+                        minWidth: '32px',
+                        textAlign: 'center'
+                      }}>
+                        {currentSelfRating}
+                      </div>
+                      <button
+                        onClick={() => setShowSelfRatingUI(!showSelfRatingUI)}
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          borderRadius: '4px',
+                          padding: '4px 12px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          color: 'white',
+                          opacity: 0.7
+                        }}
+                      >
+                        {showSelfRatingUI ? 'Close' : 'Rate'}
+                      </button>
+                    </div>
+
+                    {showSelfRatingUI && (
+                      <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.75rem', marginBottom: '8px', opacity: 0.7 }}>
+                          How confident are you with this question?
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                            <button
+                              key={level}
+                              onClick={() => handleSelfRatingSelect(level)}
+                              style={{
+                                background: level === currentSelfRating ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+                                border: level === currentSelfRating ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '6px',
+                                width: '40px',
+                                height: '40px',
+                                cursor: 'pointer',
+                                fontSize: '1rem',
+                                fontWeight: level === currentSelfRating ? '600' : '400',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                transition: 'all 0.15s'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (level !== currentSelfRating) {
+                                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'
+                                  e.currentTarget.style.borderColor = '#3b82f6'
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (level !== currentSelfRating) {
+                                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                                }
+                              }}
+                            >
+                              {level}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', marginTop: '8px', opacity: 0.5 }}>
+                          0 = not confident, 10 = very confident
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
