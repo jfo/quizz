@@ -1,153 +1,145 @@
 # Quizz - Spaced Repetition Quiz App
 
-A quiz application that uses spaced repetition (SM-2 algorithm) to help you learn more efficiently by focusing on questions you need to work on.
+A simple quiz application that helps you learn more efficiently by focusing on questions you need to work on the most. Features local storage for tracking your progress.
 
 ## Features
 
-- Spaced repetition algorithm (SM-2) to optimize learning
-- PostgreSQL database to track progress and statistics
-- TypeScript backend (Express) and frontend (React + Vite)
-- Clean, modern UI
-- Real-time statistics tracking
+- **Smart question ordering** - Focus on questions you struggle with using "Most Needed" mode
+- **Flexible filtering** - Filter by section, quiz, or rating level
+- **Progress tracking** - Your answers and ratings are stored locally in your browser
+- **Shuffle mode** - Randomize question order for variety
+- **Clean, modern UI** - Simple and distraction-free interface
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+
+### Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/jfo/quizz.git
+cd quizz
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+4. Open your browser to http://localhost:3000
 
 ## Project Structure
 
 ```
 quizz/
-├── backend/          # Express API server
-│   ├── src/
-│   │   ├── index.ts           # Main server file
-│   │   ├── routes.ts          # API routes
-│   │   ├── db.ts              # Database connection
-│   │   ├── spacedRepetition.ts # SM-2 algorithm
-│   │   └── types.ts           # TypeScript types
-│   ├── schema.sql             # Database schema
-│   └── package.json
-├── frontend/         # React frontend
-│   ├── src/
-│   │   ├── App.tsx            # Main app component
-│   │   ├── main.tsx           # Entry point
-│   │   ├── api.ts             # API client
-│   │   └── index.css          # Styles
-│   └── package.json
-└── questions.json    # Question bank
+├── src/
+│   ├── App.tsx              # Main app component
+│   ├── main.tsx             # Entry point
+│   ├── api.ts               # API layer
+│   ├── questionManager.ts   # Question loading and filtering
+│   └── questionState.ts     # Local storage for ratings and progress
+├── public/
+│   └── questions.json       # Question bank
+├── index.html
+├── vite.config.ts
+├── package.json
+└── deploy.sh                # Deploy to GitHub Pages
 ```
-
-## Setup
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- Docker and Docker Compose (recommended) OR PostgreSQL (v14 or higher)
-
-### 1. Database Setup
-
-#### Option A: Using Docker (Recommended)
-
-Start PostgreSQL with Docker Compose:
-
-```bash
-docker-compose up -d
-```
-
-The database will automatically be created with the schema. That's it!
-
-#### Option B: Manual PostgreSQL Setup
-
-Create a PostgreSQL database:
-
-```bash
-psql -U postgres
-CREATE DATABASE quizz_db;
-\q
-```
-
-Run the schema:
-
-```bash
-psql -U postgres -d quizz_db -f backend/schema.sql
-```
-
-### 2. Backend Setup
-
-```bash
-cd backend
-npm install
-```
-
-Create a `.env` file in the `backend` directory:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your PostgreSQL credentials:
-
-```
-PORT=3001
-DATABASE_URL=postgresql://postgres:quizz_password@localhost:5432/quizz_db
-```
-
-Note: If using Docker Compose, the default credentials above will work. If using your own PostgreSQL, update the password accordingly.
-
-### 3. Frontend Setup
-
-```bash
-cd frontend
-npm install
-```
-
-## Running the App
-
-### Start the backend (in one terminal):
-
-```bash
-cd backend
-npm run dev
-```
-
-The API will run on http://localhost:3001
-
-### Start the frontend (in another terminal):
-
-```bash
-cd frontend
-npm run dev
-```
-
-The frontend will run on http://localhost:3000
 
 ## How It Works
 
-### Spaced Repetition Algorithm
+### Question Modes
 
-The app uses the SM-2 (SuperMemo 2) algorithm to determine when to show each question:
+- **Sequential mode** - Go through questions in order
+- **Shuffle mode** - Randomize question order
+- **Most Needed mode** - Prioritize questions you've gotten wrong or haven't answered recently
 
-1. **New questions** start with default settings
-2. **Correct answers** increase the interval before the next review
-3. **Incorrect answers** reset the interval to review sooner
-4. The algorithm adapts to your performance on each question
+### Progress Tracking
 
-### API Endpoints
+Your progress is stored locally in your browser using localStorage:
+- **Rating system** - Questions are rated 0-5 stars based on your performance
+- **Correct streaks** - Track consecutive correct answers
+- **Incorrect count** - Track how many times you've gotten a question wrong
+- **Last answered time** - Know when you last saw each question
 
-- `GET /api/questions/next` - Get the next question to study
-- `POST /api/answers` - Submit an answer and update statistics
-- `GET /api/stats` - Get overall statistics
+### Filters
 
-## Database Schema
+- **Section filter** - Choose specific sections to study
+- **Quiz filter** - Select individual quizzes
+- **Rating filter** - Focus on questions with specific rating levels (e.g., only 0-2 star questions)
 
-- `question_stats` - Tracks spaced repetition data for each question
-- `response_history` - Logs every answer for historical tracking
-- `session_stats` - Overall session statistics (optional)
+## Scripts
 
-## Next Steps
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run build:check` - Type check and build
+- `npm run preview` - Preview production build
+- `npm run test` - Run tests in watch mode
+- `npm run test:ui` - Open Vitest UI
+- `npm run test:run` - Run tests once
+- `npm run deploy` - Deploy to GitHub Pages
 
-Some ideas for future features:
+## Deployment
 
-- User accounts and authentication
-- Multiple study modes (practice mode, test mode)
-- Progress visualization and charts
-- Custom question sets
-- Mobile app version
-- Study streak tracking
-- Daily goals and reminders
+Deploy to GitHub Pages:
+
+```bash
+npm run deploy
+```
+
+This will build the app and deploy it to the `gh-pages` branch.
+
+## Data Storage
+
+All data is stored locally in your browser's localStorage:
+- No backend server required
+- No database needed
+- Data persists between sessions
+- Data is specific to your browser/device
+
+To reset your progress, clear your browser's localStorage or use the "Reset Data" button in the app.
+
+## Adding Questions
+
+Questions are stored in `public/questions.json`. The file structure is:
+
+```json
+[
+  {
+    "section": "Section Name",
+    "sectionUrl": "https://...",
+    "quizCount": 1,
+    "quizzes": [
+      {
+        "url": "https://...",
+        "title": "Quiz Title",
+        "questionCount": 10,
+        "questions": [
+          {
+            "id": "unique-id",
+            "question": "Question text?",
+            "questionEn": "English translation (optional)",
+            "metadata": "Additional info (optional)",
+            "options": [
+              { "text": "Option 1", "textEn": "English (optional)", "correct": true },
+              { "text": "Option 2", "textEn": "English (optional)", "correct": false }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
+```
+
+## License
+
+MIT
