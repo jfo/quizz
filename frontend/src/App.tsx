@@ -78,7 +78,7 @@ function App() {
 
       const sections = selectedSections.length > 0 ? selectedSections : undefined
       const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
-      const currentStats = await getStats(sections, quizzes, 0)
+      const currentStats = await getStats(sections, quizzes, 0, ratingFilter || undefined)
       setStats(currentStats)
     } catch (err) {
       console.error('Failed to load stats:', err)

@@ -96,6 +96,6 @@ export async function submitAnswer(
   return getManager().submitAnswer(questionId, isCorrect, selectedOption, responseTimeMs);
 }
 
-export async function getStats(sections?: string[], quizzes?: string[], timeframeDays?: number): Promise<Stats> {
-  return getManager().getStats(sections, quizzes, timeframeDays);
+export async function getStats(sections?: string[], quizzes?: string[], timeframeDays?: number, ratingRange?: [number, number]): Promise<Stats> {
+  return getManager().getStats(sections, quizzes, timeframeDays, ratingRange);
 }
