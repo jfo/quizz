@@ -2,7 +2,6 @@
 
 export interface QuestionState {
   rating: number; // 0 = unrated/unknown, higher = better knowledge (increments on correct, decrements on incorrect)
-  selfRating: number; // User's self-assessment rating (0-10, set manually)
   correctStreak: number; // consecutive correct answers
   incorrectCount: number; // total incorrect answers
   lastAnswered: number; // timestamp
@@ -41,7 +40,6 @@ export function getQuestionState(questionId: string): QuestionState {
   const states = loadQuestionStates();
   return states[questionId] || {
     rating: 0,
-    selfRating: 0,
     correctStreak: 0,
     incorrectCount: 0,
     lastAnswered: 0,
@@ -81,11 +79,6 @@ export function updateRatingAfterAnswer(questionId: string, isCorrect: boolean):
 // Manually set rating
 export function setQuestionRating(questionId: string, rating: number): QuestionState {
   return updateQuestionState(questionId, { rating });
-}
-
-// Manually set self-rating
-export function setQuestionSelfRating(questionId: string, selfRating: number): QuestionState {
-  return updateQuestionState(questionId, { selfRating });
 }
 
 // Calculate "need" score for prioritization (higher = more needed)
@@ -135,10 +128,6 @@ export function importState(jsonString: string): boolean {
           typeof state.incorrectCount !== 'number' ||
           typeof state.lastAnswered !== 'number') {
         throw new Error(`Invalid state for question ${key}`);
-      }
-      // Add selfRating if missing (for backward compatibility)
-      if (typeof state.selfRating !== 'number') {
-        state.selfRating = 0;
       }
     }
 
