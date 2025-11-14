@@ -5,15 +5,13 @@ set -e  # Exit on error
 echo "🚀 Starting deployment to gh-pages..."
 
 # Configuration
-BUILD_DIR="frontend/dist"
+BUILD_DIR="dist"
 DEPLOY_DIR=".gh-pages-deploy"
 BRANCH="gh-pages"
 
 # Step 1: Build the project
 echo "📦 Building the project..."
-cd frontend
 npm run build
-cd ..
 
 # Check if build was successful
 if [ ! -d "$BUILD_DIR" ]; then
