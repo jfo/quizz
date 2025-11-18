@@ -130,24 +130,23 @@ body {
   transform: scale(1.1);
 }
 
-.peek-icon-header {
-  position: absolute;
-  top: 50%;
-  right: 16px;
-  transform: translateY(-50%);
+.peek-icon-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.7;
   transition: opacity 0.2s ease, transform 0.15s ease;
-  z-index: 10;
   font-size: 1.25rem;
+  margin-left: auto;
 }
 
-.peek-icon-header:hover {
+.peek-icon-stats:hover {
   opacity: 1;
-  transform: translateY(-50%) scale(1.15);
+  transform: scale(1.15);
 }
 
-.peek-icon-header:active {
-  transform: translateY(-50%) scale(1.1);
+.peek-icon-stats:active {
+  transform: scale(1.1);
 }
 
 .options {
