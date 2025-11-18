@@ -71,7 +71,7 @@ COMMIT_MSG="Deploy to GitHub Pages - $(date '+%Y-%m-%d %H:%M:%S')"
 git commit -m "$COMMIT_MSG"
 
 echo "⬆️  Pushing to $BRANCH branch..."
-git push -u origin "$BRANCH"
+git push -uf origin "$BRANCH"
 
 cd ..
 
