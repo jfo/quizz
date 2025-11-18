@@ -809,6 +809,19 @@ function App() {
               </div>
               <div className="stat-label">Session ({sessionStats.total})</div>
             </div>
+            {question && (question.questionEn || question.options.some(opt => opt.textEn)) && (
+              <button
+                className="peek-icon peek-icon-stats"
+                onMouseDown={() => setShowTranslations(true)}
+                onMouseUp={() => setShowTranslations(false)}
+                onMouseLeave={() => setShowTranslations(false)}
+                onTouchStart={() => setShowTranslations(true)}
+                onTouchEnd={() => setShowTranslations(false)}
+                title="Hold to see translations"
+              >
+                {showTranslations ? '👁️' : '👁️‍🗨️'}
+              </button>
+            )}
           </div>
         )}
 
@@ -964,19 +977,6 @@ function App() {
       <div className="app">
         <div className="header">
           <h1>Indfødsretsprøven</h1>
-          {question && (question.questionEn || question.options.some(opt => opt.textEn)) && (
-            <button
-              className="peek-icon peek-icon-header"
-              onMouseDown={() => setShowTranslations(true)}
-              onMouseUp={() => setShowTranslations(false)}
-              onMouseLeave={() => setShowTranslations(false)}
-              onTouchStart={() => setShowTranslations(true)}
-              onTouchEnd={() => setShowTranslations(false)}
-              title="Hold to see translations"
-            >
-              {showTranslations ? '👁️' : '👁️‍🗨️'}
-            </button>
-          )}
         </div>
         {renderMainContent()}
       </div>
