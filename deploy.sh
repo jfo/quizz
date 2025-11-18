@@ -36,7 +36,7 @@ if git show-ref --verify --quiet refs/heads/$BRANCH; then
   git worktree add "$DEPLOY_DIR" "$BRANCH"
 else
   echo "Branch $BRANCH doesn't exist, creating it..."
-  git worktree add --orphan "$DEPLOY_DIR" "$BRANCH"
+  git worktree add -b "$BRANCH" --orphan "$DEPLOY_DIR"
 fi
 
 # Step 3: Copy build files
