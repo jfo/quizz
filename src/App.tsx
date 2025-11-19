@@ -31,6 +31,10 @@ function App() {
     const saved = localStorage.getItem('darkMode')
     return saved === 'true'
   })
+  const [settingsCollapsed, setSettingsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('settingsCollapsed')
+    return saved === 'true'
+  })
 
   // Apply dark mode to document
   useEffect(() => {
@@ -41,6 +45,11 @@ function App() {
     }
     localStorage.setItem('darkMode', String(darkMode))
   }, [darkMode])
+
+  // Persist settings collapsed state
+  useEffect(() => {
+    localStorage.setItem('settingsCollapsed', String(settingsCollapsed))
+  }, [settingsCollapsed])
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -376,11 +385,23 @@ function App() {
   }
 
   const renderSettingsPanel = () => (
-    <div className="settings-panel">
-      <div className="settings-header">
+    <div className="settings-panel" style={settingsCollapsed ? { width: 'auto' } : undefined}>
+      <div
+        className="settings-header"
+        onClick={() => setSettingsCollapsed(!settingsCollapsed)}
+        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+      >
         <h2>Settings</h2>
+        <span style={{
+          fontSize: '0.75rem',
+          opacity: 0.8,
+          transition: 'transform 0.2s ease',
+          transform: settingsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+        }}>
+          {settingsCollapsed ? '▶' : '▼'}
+        </span>
       </div>
-      <div className="settings-content">
+      {!settingsCollapsed && <div className="settings-content">
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>Appearance</h3>
@@ -817,7 +838,7 @@ function App() {
             Save or load your ratings and progress
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   )
 

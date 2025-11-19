@@ -76,10 +76,10 @@
   --color-success-border: #10b981;
   --color-success-text: #6ee7b7;
   --color-success-border-light: #065f46;
-  --color-error-bg: #7f1d1d;
-  --color-error-border: #ef4444;
-  --color-error-text: #fca5a5;
-  --color-error-border-light: #991b1b;
+  --color-error-bg: #3d2020;
+  --color-error-border: #9b5858;
+  --color-error-text: #d4a5a5;
+  --color-error-border-light: #5c3333;
 
   /* Shadow colors */
   --color-shadow: rgba(0, 0, 0, 0.3);
