@@ -23,6 +23,7 @@ export interface IQuestionManager {
   getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question>;
   submitAnswer(questionId: string, isCorrect: boolean, selectedOption: string, responseTimeMs?: number): Promise<AnswerResponse>;
   getStats(sections?: string[], quizzes?: string[], timeframeDays?: number, ratingRange?: [number, number]): Promise<Stats>;
+  getAllQuestionsForStats(sections?: string[], quizzes?: string[]): Promise<Question[]>;
   initialize(): Promise<void>;
 }
 
@@ -194,6 +195,10 @@ export class LocalQuestionManager implements IQuestionManager {
       incorrectAttempts: 0,
       overallAccuracy: 0,
     };
+  }
+
+  async getAllQuestionsForStats(sections?: string[], quizzes?: string[]): Promise<Question[]> {
+    return this.getAllQuestions(sections, quizzes);
   }
 }
 
