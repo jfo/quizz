@@ -27,6 +27,20 @@ function App() {
   const [currentQuestionRating, setCurrentQuestionRating] = useState(0)
   const [ratingFilter, setRatingFilter] = useState<[number, number] | null>(null)
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false)
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode')
+    return saved === 'true'
+  })
+
+  // Apply dark mode to document
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+    localStorage.setItem('darkMode', String(darkMode))
+  }, [darkMode])
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -364,9 +378,46 @@ function App() {
   const renderSettingsPanel = () => (
     <div className="settings-panel">
       <div className="settings-header">
-        <h2>Question Selection</h2>
+        <h2>Settings</h2>
       </div>
       <div className="settings-content">
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Appearance</h3>
+          </div>
+          <label className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span>Dark Mode</span>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: darkMode ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                padding: 0
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: darkMode ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+              />
+            </button>
+          </label>
+        </div>
+
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
@@ -385,7 +436,7 @@ function App() {
                   border: 'none',
                   fontSize: '0.75rem',
                   fontWeight: '600',
-                  color: '#6b7280',
+                  color: 'var(--color-text-muted)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   marginBottom: '8px',
@@ -428,7 +479,7 @@ function App() {
                             if (input) input.indeterminate = someSelected
                           }}
                           onChange={() => toggleSection(sectionData.section)}
-                          style={{ cursor: 'pointer', accentColor: '#a31537' }}
+                          style={{ cursor: 'pointer', accentColor: 'var(--color-primary)' }}
                         />
                         <span
                           className="section-name"
@@ -467,7 +518,7 @@ function App() {
                   border: 'none',
                   fontSize: '0.75rem',
                   fontWeight: '600',
-                  color: '#6b7280',
+                  color: 'var(--color-text-muted)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   marginBottom: '8px',
@@ -510,7 +561,7 @@ function App() {
                             if (input) input.indeterminate = someSelected
                           }}
                           onChange={() => toggleSection(sectionData.section)}
-                          style={{ cursor: 'pointer', accentColor: '#a31537' }}
+                          style={{ cursor: 'pointer', accentColor: 'var(--color-primary)' }}
                         />
                         <span
                           className="section-name"
@@ -562,7 +613,7 @@ function App() {
             />
             <span>Shuffle questions</span>
           </label>
-          <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '8px', paddingLeft: '38px' }}>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-placeholder)', marginTop: '8px', paddingLeft: '38px' }}>
             {mostNeededMode
               ? 'Questions ordered by knowledge level and performance'
               : shuffleMode
@@ -588,7 +639,7 @@ function App() {
               Reset
             </button>
           </div>
-          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '16px' }}>
+          <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
             {ratingFilter === null
               ? 'Showing all questions (0-10)'
               : `Showing level ${ratingFilter[0]}-${ratingFilter[1]}`}
@@ -651,7 +702,7 @@ function App() {
                 left: '0',
                 right: '0',
                 height: '4px',
-                background: '#e5e7eb',
+                background: 'var(--color-border)',
                 borderRadius: '2px',
                 transform: 'translateY(-50%)',
                 zIndex: 1
@@ -662,7 +713,7 @@ function App() {
                 left: `${((ratingFilter?.[0] ?? 0) / 10) * 100}%`,
                 right: `${100 - ((ratingFilter?.[1] ?? 10) / 10) * 100}%`,
                 height: '4px',
-                background: '#a31537',
+                background: 'var(--color-primary)',
                 borderRadius: '2px',
                 transform: 'translateY(-50%)',
                 zIndex: 1
@@ -672,7 +723,7 @@ function App() {
               display: 'flex',
               justifyContent: 'space-between',
               fontSize: '0.75rem',
-              color: '#9ca3af',
+              color: 'var(--color-text-placeholder)',
               paddingTop: '4px'
             }}>
               <span>0 (Unknown)</span>
@@ -692,8 +743,8 @@ function App() {
               style={{
                 padding: '10px 16px',
                 background: 'transparent',
-                color: '#9ca3af',
-                border: '1px solid #374151',
+                color: 'var(--color-text-placeholder)',
+                border: '1px solid var(--color-border)',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -701,12 +752,12 @@ function App() {
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#a31537'
-                e.currentTarget.style.color = '#f3f4f6'
+                e.currentTarget.style.borderColor = 'var(--color-primary)'
+                e.currentTarget.style.color = 'var(--color-text-primary)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#374151'
-                e.currentTarget.style.color = '#9ca3af'
+                e.currentTarget.style.borderColor = 'var(--color-border)'
+                e.currentTarget.style.color = 'var(--color-text-placeholder)'
               }}
             >
               Download Progress
@@ -717,8 +768,8 @@ function App() {
               style={{
                 padding: '10px 16px',
                 background: 'transparent',
-                color: '#9ca3af',
-                border: '1px solid #374151',
+                color: 'var(--color-text-placeholder)',
+                border: '1px solid var(--color-border)',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -726,12 +777,12 @@ function App() {
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#a31537'
-                e.currentTarget.style.color = '#f3f4f6'
+                e.currentTarget.style.borderColor = 'var(--color-primary)'
+                e.currentTarget.style.color = 'var(--color-text-primary)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#374151'
-                e.currentTarget.style.color = '#9ca3af'
+                e.currentTarget.style.borderColor = 'var(--color-border)'
+                e.currentTarget.style.color = 'var(--color-text-placeholder)'
               }}
             >
               Restore Progress
@@ -742,8 +793,8 @@ function App() {
               style={{
                 padding: '10px 16px',
                 background: 'transparent',
-                color: '#ef4444',
-                border: '1px solid #7f1d1d',
+                color: 'var(--color-error-border)',
+                border: '1px solid var(--color-error-border-light)',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -751,18 +802,18 @@ function App() {
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#ef4444'
-                e.currentTarget.style.color = '#fca5a5'
+                e.currentTarget.style.borderColor = 'var(--color-error-border)'
+                e.currentTarget.style.color = 'var(--color-error-text)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#7f1d1d'
-                e.currentTarget.style.color = '#ef4444'
+                e.currentTarget.style.borderColor = 'var(--color-error-border-light)'
+                e.currentTarget.style.color = 'var(--color-error-border)'
               }}
             >
               Reset All Data
             </button>
           </div>
-          <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginTop: '8px' }}>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: '8px' }}>
             Save or load your ratings and progress
           </div>
         </div>
@@ -838,7 +889,7 @@ function App() {
               {showTranslations && question.section && (
                 <div style={{
                   fontSize: '0.75rem',
-                  color: '#6b7280',
+                  color: 'var(--color-text-muted)',
                   textAlign: 'center',
                   marginTop: '8px',
                   fontStyle: 'italic'
@@ -892,7 +943,7 @@ function App() {
                     <div style={{
                       fontSize: '1.5rem',
                       fontWeight: '600',
-                      color: currentQuestionRating === 0 ? '#9ca3af' : '#10b981',
+                      color: currentQuestionRating === 0 ? 'var(--color-text-placeholder)' : 'var(--color-success-border)',
                       minWidth: '32px',
                       textAlign: 'center'
                     }}>
@@ -901,13 +952,13 @@ function App() {
                     <button
                       onClick={() => setShowRatingUI(!showRatingUI)}
                       style={{
-                        background: 'white',
-                        border: '2px solid #d1d5db',
+                        background: 'var(--color-bg-card)',
+                        border: '2px solid var(--color-border-dark)',
                         borderRadius: '4px',
                         padding: '4px 12px',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
-                        color: '#374151',
+                        color: 'var(--color-text-secondary)',
                         fontWeight: '500'
                       }}
                     >
@@ -926,8 +977,8 @@ function App() {
                             key={level}
                             onClick={() => handleRatingSelect(level)}
                             style={{
-                              background: level === currentQuestionRating ? '#a31537' : 'white',
-                              border: level === currentQuestionRating ? '2px solid #a31537' : '2px solid #d1d5db',
+                              background: level === currentQuestionRating ? 'var(--color-primary)' : 'var(--color-bg-card)',
+                              border: level === currentQuestionRating ? '2px solid var(--color-primary)' : '2px solid var(--color-border-dark)',
                               borderRadius: '6px',
                               width: '40px',
                               height: '40px',
@@ -937,19 +988,19 @@ function App() {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: level === currentQuestionRating ? 'white' : '#374151',
+                              color: level === currentQuestionRating ? 'white' : 'var(--color-text-secondary)',
                               transition: 'all 0.15s'
                             }}
                             onMouseEnter={(e) => {
                               if (level !== currentQuestionRating) {
-                                e.currentTarget.style.background = '#fef2f2'
-                                e.currentTarget.style.borderColor = '#a31537'
+                                e.currentTarget.style.background = 'var(--color-bg-hover)'
+                                e.currentTarget.style.borderColor = 'var(--color-primary)'
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (level !== currentQuestionRating) {
-                                e.currentTarget.style.background = 'white'
-                                e.currentTarget.style.borderColor = '#d1d5db'
+                                e.currentTarget.style.background = 'var(--color-bg-card)'
+                                e.currentTarget.style.borderColor = 'var(--color-border-dark)'
                               }
                             }}
                           >
@@ -990,7 +1041,7 @@ function App() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
+            background: 'var(--color-modal-overlay)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1001,20 +1052,20 @@ function App() {
         >
           <div
             style={{
-              background: '#1f2937',
+              background: 'var(--color-modal-bg)',
               borderRadius: '12px',
               padding: '32px',
               maxWidth: '480px',
               width: '100%',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-              border: '1px solid #374151'
+              border: '1px solid var(--color-border)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{
               fontSize: '1.5rem',
               fontWeight: '600',
-              color: '#f3f4f6',
+              color: 'var(--color-text-primary)',
               marginBottom: '16px',
               textAlign: 'center'
             }}>
@@ -1022,7 +1073,7 @@ function App() {
             </h2>
             <p style={{
               fontSize: '1rem',
-              color: '#9ca3af',
+              color: 'var(--color-text-placeholder)',
               marginBottom: '24px',
               textAlign: 'center',
               lineHeight: '1.6'
@@ -1039,8 +1090,8 @@ function App() {
                 style={{
                   padding: '12px 24px',
                   background: 'transparent',
-                  color: '#9ca3af',
-                  border: '2px solid #374151',
+                  color: 'var(--color-text-placeholder)',
+                  border: '2px solid var(--color-border)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '1rem',
@@ -1049,12 +1100,12 @@ function App() {
                   minWidth: '120px'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#6b7280'
-                  e.currentTarget.style.color = '#f3f4f6'
+                  e.currentTarget.style.borderColor = 'var(--color-text-muted)'
+                  e.currentTarget.style.color = 'var(--color-text-primary)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#374151'
-                  e.currentTarget.style.color = '#9ca3af'
+                  e.currentTarget.style.borderColor = 'var(--color-border)'
+                  e.currentTarget.style.color = 'var(--color-text-placeholder)'
                 }}
               >
                 Cancel
