@@ -385,11 +385,13 @@ function App() {
   }
 
   const renderSettingsPanel = () => (
-    <div className="settings-panel" style={settingsCollapsed ? { width: 'auto' } : undefined}>
-      <div
+    <aside className="settings-panel" style={settingsCollapsed ? { width: 'auto' } : undefined} aria-label="Quiz settings">
+      <button
         className="settings-header"
         onClick={() => setSettingsCollapsed(!settingsCollapsed)}
-        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', textAlign: 'left' }}
+        aria-expanded={!settingsCollapsed}
+        aria-controls="settings-content"
       >
         <h2>Settings</h2>
         <span style={{
@@ -397,19 +399,22 @@ function App() {
           opacity: 0.8,
           transition: 'transform 0.2s ease',
           transform: settingsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-        }}>
+        }} aria-hidden="true">
           {settingsCollapsed ? '▶' : '▼'}
         </span>
-      </div>
-      {!settingsCollapsed && <div className="settings-content">
+      </button>
+      {!settingsCollapsed && <div id="settings-content" className="settings-content">
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>Appearance</h3>
           </div>
-          <label className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span>Dark Mode</span>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="dark-mode-label">Dark Mode</span>
             <button
               onClick={() => setDarkMode(!darkMode)}
+              role="switch"
+              aria-checked={darkMode}
+              aria-labelledby="dark-mode-label"
               style={{
                 position: 'relative',
                 width: '44px',
@@ -434,9 +439,10 @@ function App() {
                   transition: 'left 0.2s ease',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
                 }}
+                aria-hidden="true"
               />
             </button>
-          </label>
+          </div>
         </div>
 
         <div className="settings-section">
@@ -452,6 +458,7 @@ function App() {
             <div style={{ marginBottom: '16px' }}>
               <button
                 onClick={() => setShowChapters(!showChapters)}
+                aria-expanded={showChapters}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -470,7 +477,7 @@ function App() {
                   textAlign: 'left'
                 }}
               >
-                <span style={{ fontSize: '0.65rem' }}>{showChapters ? '▼' : '▶'}</span>
+                <span style={{ fontSize: '0.65rem' }} aria-hidden="true">{showChapters ? '▼' : '▶'}</span>
                 <span>Book Chapters</span>
               </button>
               {showChapters && quizzesBySection
@@ -490,8 +497,10 @@ function App() {
                         <button
                           className="expand-button"
                           onClick={() => toggleSectionExpanded(sectionData.section)}
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${sectionData.section}`}
                         >
-                          {isExpanded ? '▼' : '▶'}
+                          <span aria-hidden="true">{isExpanded ? '▼' : '▶'}</span>
                         </button>
                         <input
                           type="checkbox"
@@ -500,6 +509,7 @@ function App() {
                             if (input) input.indeterminate = someSelected
                           }}
                           onChange={() => toggleSection(sectionData.section)}
+                          aria-label={`Select all quizzes in ${sectionData.section}`}
                           style={{ cursor: 'pointer', accentColor: 'var(--color-primary)' }}
                         />
                         <span
@@ -534,6 +544,7 @@ function App() {
             <div>
               <button
                 onClick={() => setShowOtherTopics(!showOtherTopics)}
+                aria-expanded={showOtherTopics}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -552,7 +563,7 @@ function App() {
                   textAlign: 'left'
                 }}
               >
-                <span style={{ fontSize: '0.65rem' }}>{showOtherTopics ? '▼' : '▶'}</span>
+                <span style={{ fontSize: '0.65rem' }} aria-hidden="true">{showOtherTopics ? '▼' : '▶'}</span>
                 <span>Other Topics</span>
               </button>
               {showOtherTopics && quizzesBySection
@@ -572,8 +583,10 @@ function App() {
                         <button
                           className="expand-button"
                           onClick={() => toggleSectionExpanded(sectionData.section)}
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${sectionData.section}`}
                         >
-                          {isExpanded ? '▼' : '▶'}
+                          <span aria-hidden="true">{isExpanded ? '▼' : '▶'}</span>
                         </button>
                         <input
                           type="checkbox"
@@ -582,6 +595,7 @@ function App() {
                             if (input) input.indeterminate = someSelected
                           }}
                           onChange={() => toggleSection(sectionData.section)}
+                          aria-label={`Select all quizzes in ${sectionData.section}`}
                           style={{ cursor: 'pointer', accentColor: 'var(--color-primary)' }}
                         />
                         <span
@@ -679,6 +693,10 @@ function App() {
                   setRatingFilter(filter)
                   localStorage.setItem('ratingFilter', JSON.stringify(filter))
                 }}
+                aria-label="Minimum knowledge level"
+                aria-valuemin={0}
+                aria-valuemax={10}
+                aria-valuenow={ratingFilter?.[0] ?? 0}
                 style={{
                   position: 'absolute',
                   width: '100%',
@@ -704,6 +722,10 @@ function App() {
                   setRatingFilter(filter)
                   localStorage.setItem('ratingFilter', JSON.stringify(filter))
                 }}
+                aria-label="Maximum knowledge level"
+                aria-valuemin={0}
+                aria-valuemax={10}
+                aria-valuenow={ratingFilter?.[1] ?? 10}
                 style={{
                   position: 'absolute',
                   width: '100%',
@@ -839,7 +861,7 @@ function App() {
           </div>
         </div>
       </div>}
-    </div>
+    </aside>
   )
 
   const renderMainContent = () => {
@@ -889,9 +911,10 @@ function App() {
                 onMouseLeave={() => setShowTranslations(false)}
                 onTouchStart={() => setShowTranslations(true)}
                 onTouchEnd={() => setShowTranslations(false)}
+                aria-label="Show English translations (hold to peek)"
                 title="Hold to see translations"
               >
-                {showTranslations ? '👁️' : '👁️‍🗨️'}
+                <span aria-hidden="true">{showTranslations ? '👁️' : '👁️‍🗨️'}</span>
               </button>
             )}
           </div>
@@ -950,7 +973,11 @@ function App() {
             </div>
 
             {answered && (
-              <div className={`feedback ${selectedOption === correctOptionIndex ? 'correct' : 'incorrect'}`}>
+              <div
+                className={`feedback ${selectedOption === correctOptionIndex ? 'correct' : 'incorrect'}`}
+                role="alert"
+                aria-live="polite"
+              >
                 {selectedOption === correctOptionIndex ? (
                   <strong>Correct! Click the answer again to continue.</strong>
                 ) : (
@@ -1045,12 +1072,17 @@ function App() {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">
+        Skip to quiz
+      </a>
       {renderSettingsPanel()}
       <div className="app">
-        <div className="header">
+        <header className="header">
           <h1>Indfødsretsprøven</h1>
-        </div>
-        {renderMainContent()}
+        </header>
+        <main id="main-content">
+          {renderMainContent()}
+        </main>
       </div>
 
       {/* Reset Confirmation Modal */}
@@ -1070,8 +1102,12 @@ function App() {
             padding: '20px'
           }}
           onClick={() => setShowResetConfirmModal(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setShowResetConfirmModal(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-dialog-title"
             style={{
               background: 'var(--color-modal-bg)',
               borderRadius: '12px',
@@ -1083,13 +1119,16 @@ function App() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{
-              fontSize: '1.5rem',
-              fontWeight: '600',
-              color: 'var(--color-text-primary)',
-              marginBottom: '16px',
-              textAlign: 'center'
-            }}>
+            <h2
+              id="reset-dialog-title"
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: '600',
+                color: 'var(--color-text-primary)',
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}
+            >
               Reset All Data?
             </h2>
             <p style={{
