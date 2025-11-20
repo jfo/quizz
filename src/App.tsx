@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, getAllQuestionsForStats } from './api'
 import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState, loadQuestionStates } from './questionState'
 import { playFeedback, isSoundEnabled, isHapticEnabled, setSoundEnabled, setHapticEnabled, isHapticSupported } from './feedback'
+import { recordAnswer } from './metrics'
+import { MetricsView } from './MetricsView'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -39,6 +41,7 @@ function App() {
   const [soundEnabled, setSoundEnabledState] = useState(() => isSoundEnabled())
   const [hapticEnabled, setHapticEnabledState] = useState(() => isHapticEnabled())
   const [ratingLevelCounts, setRatingLevelCounts] = useState<{ [level: number]: number }>({})
+  const [showMetrics, setShowMetrics] = useState(false)
 
 
   // Apply dark mode to document
@@ -264,6 +267,17 @@ function App() {
       correct: prev.correct + (isCorrect ? 1 : 0),
       total: prev.total + 1
     }))
+
+    // Record answer in metrics
+    if (question) {
+      recordAnswer(
+        question.id,
+        isCorrect,
+        question.question,
+        question.section || 'Unknown',
+        question.quiz || 'Unknown'
+      )
+    }
 
     // Auto-update rating based on answer
     if (question) {
@@ -942,6 +956,32 @@ function App() {
           </div>
           <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
             <button
+              onClick={() => {
+                playFeedback('tap')
+                setShowMetrics(true)
+              }}
+              className="text-button"
+              style={{
+                padding: '10px 16px',
+                background: 'var(--color-primary)',
+                color: 'white',
+                border: '1px solid var(--color-primary)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1'
+              }}
+            >
+              📊 View Metrics
+            </button>
+            <button
               onClick={handleDownloadState}
               className="text-button"
               style={{
@@ -1352,6 +1392,40 @@ function App() {
                 Reset
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Metrics View Modal */}
+      {showMetrics && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'var(--color-modal-overlay)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+            overflowY: 'auto'
+          }}
+          onClick={() => setShowMetrics(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setShowMetrics(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '1000px',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <MetricsView onClose={() => setShowMetrics(false)} />
           </div>
         </div>
       )}
