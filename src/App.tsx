@@ -499,129 +499,6 @@ function App() {
       {!settingsCollapsed && <div id="settings-content" className="settings-content">
         <div className="settings-section">
           <div className="settings-section-header">
-            <h3>Appearance</h3>
-          </div>
-          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span id="dark-mode-label">Dark Mode</span>
-            <button
-              onClick={() => {
-                playFeedback('toggle')
-                setDarkMode(!darkMode)
-              }}
-              role="switch"
-              aria-checked={darkMode}
-              aria-labelledby="dark-mode-label"
-              style={{
-                position: 'relative',
-                width: '44px',
-                height: '24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: darkMode ? 'var(--color-primary)' : 'var(--color-border)',
-                cursor: 'pointer',
-                transition: 'background 0.2s ease',
-                padding: 0
-              }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  left: darkMode ? '22px' : '2px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                }}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span id="sound-label">Sound Effects</span>
-            <button
-              onClick={toggleSoundEnabled}
-              role="switch"
-              aria-checked={soundEnabled}
-              aria-labelledby="sound-label"
-              style={{
-                position: 'relative',
-                width: '44px',
-                height: '24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: soundEnabled ? 'var(--color-primary)' : 'var(--color-border)',
-                cursor: 'pointer',
-                transition: 'background 0.2s ease',
-                padding: 0
-              }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  left: soundEnabled ? '22px' : '2px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                }}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span id="haptic-label">
-              Haptic Feedback
-              {!isHapticSupported() && (
-                <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '6px' }}>
-                  (not supported)
-                </span>
-              )}
-            </span>
-            <button
-              onClick={toggleHapticEnabled}
-              role="switch"
-              aria-checked={hapticEnabled}
-              aria-labelledby="haptic-label"
-              disabled={!isHapticSupported()}
-              style={{
-                position: 'relative',
-                width: '44px',
-                height: '24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: hapticEnabled ? 'var(--color-primary)' : 'var(--color-border)',
-                cursor: isHapticSupported() ? 'pointer' : 'not-allowed',
-                transition: 'background 0.2s ease',
-                padding: 0,
-                opacity: isHapticSupported() ? 1 : 0.5
-              }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  left: hapticEnabled ? '22px' : '2px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                }}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-section">
-          <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
             <div className="settings-actions">
               <button onClick={selectAllQuizzes} className="text-button">All</button>
@@ -800,6 +677,129 @@ function App() {
                   )
                 })}
             </div>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-header">
+            <h3>Appearance</h3>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="dark-mode-label">Dark Mode</span>
+            <button
+              onClick={() => {
+                playFeedback('toggle')
+                setDarkMode(!darkMode)
+              }}
+              role="switch"
+              aria-checked={darkMode}
+              aria-labelledby="dark-mode-label"
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: darkMode ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                padding: 0
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: darkMode ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="sound-label">Sound Effects</span>
+            <button
+              onClick={toggleSoundEnabled}
+              role="switch"
+              aria-checked={soundEnabled}
+              aria-labelledby="sound-label"
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: soundEnabled ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                padding: 0
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: soundEnabled ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="haptic-label">
+              Haptic Feedback
+              {!isHapticSupported() && (
+                <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '6px' }}>
+                  (not supported)
+                </span>
+              )}
+            </span>
+            <button
+              onClick={toggleHapticEnabled}
+              role="switch"
+              aria-checked={hapticEnabled}
+              aria-labelledby="haptic-label"
+              disabled={!isHapticSupported()}
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: hapticEnabled ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: isHapticSupported() ? 'pointer' : 'not-allowed',
+                transition: 'background 0.2s ease',
+                padding: 0,
+                opacity: isHapticSupported() ? 1 : 0.5
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: hapticEnabled ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
           </div>
         </div>
 
