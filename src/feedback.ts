@@ -116,31 +116,42 @@ const playSound = (type: FeedbackType) => {
  * Trigger haptic feedback using the Vibration API
  */
 const playHaptic = (type: FeedbackType) => {
-  if (!navigator.vibrate) return
+  if (!isHapticSupported()) {
+    console.debug('Haptic feedback not supported on this device/browser')
+    return
+  }
 
   try {
+    let pattern: number | number[]
     switch (type) {
       case 'tap':
       case 'toggle':
         // Very light tap
-        navigator.vibrate(5)
+        pattern = 5
         break
       case 'success':
         // Double tap pattern
-        navigator.vibrate([10, 30, 15])
+        pattern = [10, 30, 15]
         break
       case 'error':
         // Single medium tap
-        navigator.vibrate(20)
+        pattern = 20
         break
       case 'move':
         // Light tap
-        navigator.vibrate(8)
+        pattern = 8
         break
+      default:
+        return
+    }
+
+    const result = navigator.vibrate(pattern)
+    if (!result) {
+      console.debug('Vibration request was denied or failed')
     }
   } catch (err) {
-    // Silently fail - don't break the app if vibration doesn't work
-    console.debug('Haptic feedback failed:', err)
+    // Don't break the app if vibration doesn't work
+    console.warn('Haptic feedback failed:', err)
   }
 }
 
@@ -158,6 +169,13 @@ export const isSoundEnabled = (): boolean => {
 export const isHapticEnabled = (): boolean => {
   const saved = localStorage.getItem('hapticEnabled')
   return saved !== 'false' // Default to true
+}
+
+/**
+ * Check if haptic feedback is supported by the browser/device
+ */
+export const isHapticSupported = (): boolean => {
+  return 'vibrate' in navigator && typeof navigator.vibrate === 'function'
 }
 
 /**
