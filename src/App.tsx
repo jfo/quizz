@@ -418,11 +418,10 @@ function App() {
       <div className="settings-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
         <button
           onClick={() => setSettingsCollapsed(!settingsCollapsed)}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, border: 'none', textAlign: 'left', background: 'transparent', padding: 0 }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', flex: 1, border: 'none', textAlign: 'left', background: 'transparent', padding: 0 }}
           aria-expanded={!settingsCollapsed}
           aria-controls="settings-content"
         >
-          <h2>Settings</h2>
           <span style={{
             fontSize: '0.75rem',
             opacity: 0.8,
@@ -431,6 +430,7 @@ function App() {
           }} aria-hidden="true">
             {settingsCollapsed ? '▶' : '▼'}
           </span>
+          <h2>Settings</h2>
         </button>
         {question && (question.questionEn || question.options.some(opt => opt.textEn)) && (
           <button
