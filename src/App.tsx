@@ -257,6 +257,8 @@ function App() {
     if (question) {
       const updatedState = updateRatingAfterAnswer(question.id, isCorrect)
       setCurrentQuestionRating(updatedState.rating)
+      // Refresh rating level counts to reflect the updated rating
+      loadStats()
     }
   }
 
@@ -265,6 +267,8 @@ function App() {
     const updatedState = setQuestionRating(question.id, rating)
     setCurrentQuestionRating(updatedState.rating)
     setShowRatingUI(false)
+    // Refresh rating level counts to reflect the manually adjusted rating
+    loadStats()
   }
 
   const toggleSection = (section: string) => {
@@ -371,8 +375,9 @@ function App() {
           const success = importState(text)
           if (success) {
             alert('State restored successfully!')
-            // Reload question to reflect new state
+            // Reload question and stats to reflect new state
             loadQuestion()
+            loadStats()
           } else {
             alert('Failed to restore state. Invalid file format.')
           }
@@ -394,6 +399,8 @@ function App() {
       setCurrentQuestionRating(0)
     }
     loadQuestion()
+    // Refresh rating level counts to reflect reset
+    loadStats()
   }
 
   const jumpToSection = async (section: string) => {
