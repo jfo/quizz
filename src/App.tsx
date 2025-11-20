@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, getAllQuestionsForStats } from './api'
 import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState, loadQuestionStates } from './questionState'
+import { playFeedback, isSoundEnabled, isHapticEnabled, setSoundEnabled, setHapticEnabled } from './feedback'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -35,6 +36,8 @@ function App() {
     const saved = localStorage.getItem('settingsCollapsed')
     return saved === 'true'
   })
+  const [soundEnabled, setSoundEnabledState] = useState(() => isSoundEnabled())
+  const [hapticEnabled, setHapticEnabledState] = useState(() => isHapticEnabled())
   const [ratingLevelCounts, setRatingLevelCounts] = useState<{ [level: number]: number }>({})
 
 
@@ -236,16 +239,25 @@ function App() {
     // If already answered, clicking the correct answer advances to next question
     if (answered) {
       if (shuffledOptions[index].correct) {
+        playFeedback('move')
         loadQuestion()
       }
       return
     }
 
     // First time answering
+    playFeedback('tap')
     setSelectedOption(index)
     setAnswered(true)
 
     const isCorrect = shuffledOptions[index].correct
+
+    // Play success or error feedback
+    if (isCorrect) {
+      playFeedback('success')
+    } else {
+      playFeedback('error')
+    }
 
     // Update session stats
     setSessionStats(prev => ({
@@ -264,6 +276,7 @@ function App() {
 
   const handleRatingSelect = (rating: number) => {
     if (!question) return
+    playFeedback('tap')
     const updatedState = setQuestionRating(question.id, rating)
     setCurrentQuestionRating(updatedState.rating)
     setShowRatingUI(false)
@@ -325,6 +338,7 @@ function App() {
   }
 
   const toggleShuffleMode = () => {
+    playFeedback('toggle')
     setShuffleMode(prev => {
       const newValue = !prev
       localStorage.setItem('shuffleMode', String(newValue))
@@ -338,6 +352,7 @@ function App() {
   }
 
   const toggleMostNeededMode = () => {
+    playFeedback('toggle')
     setMostNeededMode(prev => {
       const newValue = !prev
       localStorage.setItem('mostNeededMode', String(newValue))
@@ -346,6 +361,24 @@ function App() {
         setShuffleMode(false)
         localStorage.setItem('shuffleMode', 'false')
       }
+      return newValue
+    })
+  }
+
+  const toggleSoundEnabled = () => {
+    setSoundEnabledState(prev => {
+      const newValue = !prev
+      setSoundEnabled(newValue)
+      playFeedback('toggle') // Play feedback to demonstrate
+      return newValue
+    })
+  }
+
+  const toggleHapticEnabled = () => {
+    setHapticEnabledState(prev => {
+      const newValue = !prev
+      setHapticEnabled(newValue)
+      playFeedback('toggle') // Play feedback to demonstrate
       return newValue
     })
   }
@@ -456,7 +489,10 @@ function App() {
           <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
             <span id="dark-mode-label">Dark Mode</span>
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => {
+                playFeedback('toggle')
+                setDarkMode(!darkMode)
+              }}
               role="switch"
               aria-checked={darkMode}
               aria-labelledby="dark-mode-label"
@@ -477,6 +513,76 @@ function App() {
                   position: 'absolute',
                   top: '2px',
                   left: darkMode ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="sound-label">Sound Effects</span>
+            <button
+              onClick={toggleSoundEnabled}
+              role="switch"
+              aria-checked={soundEnabled}
+              aria-labelledby="sound-label"
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: soundEnabled ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                padding: 0
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: soundEnabled ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="haptic-label">Haptic Feedback</span>
+            <button
+              onClick={toggleHapticEnabled}
+              role="switch"
+              aria-checked={hapticEnabled}
+              aria-labelledby="haptic-label"
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: hapticEnabled ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                padding: 0
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: hapticEnabled ? '22px' : '2px',
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
