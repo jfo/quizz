@@ -979,7 +979,7 @@ function App() {
                 e.currentTarget.style.opacity = '1'
               }}
             >
-              📊 View Metrics
+              View Metrics
             </button>
             <button
               onClick={handleDownloadState}

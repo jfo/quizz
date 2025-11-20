@@ -43,7 +43,7 @@ export function MetricsView({ onClose }: MetricsViewProps) {
     return (
       <div className="metrics-view">
         <div className="metrics-header">
-          <h2>📊 Metrics</h2>
+          <h2>Metrics</h2>
           <button onClick={onClose} className="close-button">✕</button>
         </div>
         <div className="metrics-empty">
@@ -60,7 +60,7 @@ export function MetricsView({ onClose }: MetricsViewProps) {
   return (
     <div className="metrics-view">
       <div className="metrics-header">
-        <h2>📊 Metrics</h2>
+        <h2>Metrics</h2>
         <button onClick={onClose} className="close-button">✕</button>
       </div>
 
