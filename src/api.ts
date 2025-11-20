@@ -99,3 +99,7 @@ export async function submitAnswer(
 export async function getStats(sections?: string[], quizzes?: string[], timeframeDays?: number, ratingRange?: [number, number]): Promise<Stats> {
   return getManager().getStats(sections, quizzes, timeframeDays, ratingRange);
 }
+
+export async function getAllQuestionsForStats(sections?: string[], quizzes?: string[]): Promise<Question[]> {
+  return getManager().getAllQuestionsForStats(sections, quizzes);
+}

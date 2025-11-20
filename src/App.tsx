@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager } from './api'
-import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState } from './questionState'
+import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, getAllQuestionsForStats } from './api'
+import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState, loadQuestionStates } from './questionState'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -35,6 +35,8 @@ function App() {
     const saved = localStorage.getItem('settingsCollapsed')
     return saved === 'true'
   })
+  const [ratingLevelCounts, setRatingLevelCounts] = useState<{ [level: number]: number }>({})
+
 
   // Apply dark mode to document
   useEffect(() => {
@@ -97,6 +99,7 @@ function App() {
     try {
       if (selectedQuizzes.length === 0) {
         setStats(null)
+        setRatingLevelCounts({})
         return
       }
 
@@ -104,6 +107,25 @@ function App() {
       const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
       const currentStats = await getStats(sections, quizzes, 0, ratingFilter || undefined)
       setStats(currentStats)
+
+      // Compute rating level counts for questions within the selected quizzes
+      const allQuestions = await getAllQuestionsForStats(sections, quizzes)
+      const states = loadQuestionStates()
+      const counts: { [level: number]: number } = {}
+
+      // Initialize counts for levels 0-10
+      for (let i = 0; i <= 10; i++) {
+        counts[i] = 0
+      }
+
+      // Count questions by rating level
+      for (const q of allQuestions) {
+        const state = states[q.id] || { rating: 0 }
+        const rating = Math.min(10, Math.max(0, state.rating)) // Clamp to 0-10
+        counts[rating]++
+      }
+
+      setRatingLevelCounts(counts)
     } catch (err) {
       console.error('Failed to load stats:', err)
     }
@@ -386,23 +408,39 @@ function App() {
 
   const renderSettingsPanel = () => (
     <aside className="settings-panel" style={settingsCollapsed ? { width: 'auto' } : undefined} aria-label="Quiz settings">
-      <button
-        className="settings-header"
-        onClick={() => setSettingsCollapsed(!settingsCollapsed)}
-        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', border: 'none', textAlign: 'left' }}
-        aria-expanded={!settingsCollapsed}
-        aria-controls="settings-content"
-      >
-        <h2>Settings</h2>
-        <span style={{
-          fontSize: '0.75rem',
-          opacity: 0.8,
-          transition: 'transform 0.2s ease',
-          transform: settingsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
-        }} aria-hidden="true">
-          {settingsCollapsed ? '▶' : '▼'}
-        </span>
-      </button>
+      <div className="settings-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+        <button
+          onClick={() => setSettingsCollapsed(!settingsCollapsed)}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, border: 'none', textAlign: 'left', background: 'transparent', padding: 0 }}
+          aria-expanded={!settingsCollapsed}
+          aria-controls="settings-content"
+        >
+          <h2>Settings</h2>
+          <span style={{
+            fontSize: '0.75rem',
+            opacity: 0.8,
+            transition: 'transform 0.2s ease',
+            transform: settingsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+          }} aria-hidden="true">
+            {settingsCollapsed ? '▶' : '▼'}
+          </span>
+        </button>
+        {question && (question.questionEn || question.options.some(opt => opt.textEn)) && (
+          <button
+            className="peek-icon"
+            onMouseDown={() => setShowTranslations(true)}
+            onMouseUp={() => setShowTranslations(false)}
+            onMouseLeave={() => setShowTranslations(false)}
+            onTouchStart={() => setShowTranslations(true)}
+            onTouchEnd={() => setShowTranslations(false)}
+            aria-label="Show English translations (hold to peek)"
+            title="Hold to see translations"
+            style={{ marginLeft: '12px', color: 'white', opacity: 0.8 }}
+          >
+            <span aria-hidden="true">{showTranslations ? '👁️' : '👁️‍🗨️'}</span>
+          </button>
+        )}
+      </div>
       {!settingsCollapsed && <div id="settings-content" className="settings-content">
         <div className="settings-section">
           <div className="settings-section-header">
@@ -895,7 +933,7 @@ function App() {
           <div className="stats-bar">
             <div className="stat">
               <div className="stat-value">{stats.totalQuestions}</div>
-              <div className="stat-label">Total Questions</div>
+              <div className="stat-label">In Range</div>
             </div>
             <div className="stat">
               <div className="stat-value">
@@ -903,20 +941,6 @@ function App() {
               </div>
               <div className="stat-label">Session ({sessionStats.total})</div>
             </div>
-            {question && (question.questionEn || question.options.some(opt => opt.textEn)) && (
-              <button
-                className="peek-icon peek-icon-stats"
-                onMouseDown={() => setShowTranslations(true)}
-                onMouseUp={() => setShowTranslations(false)}
-                onMouseLeave={() => setShowTranslations(false)}
-                onTouchStart={() => setShowTranslations(true)}
-                onTouchEnd={() => setShowTranslations(false)}
-                aria-label="Show English translations (hold to peek)"
-                title="Hold to see translations"
-              >
-                <span aria-hidden="true">{showTranslations ? '👁️' : '👁️‍🗨️'}</span>
-              </button>
-            )}
           </div>
         )}
 
@@ -1079,6 +1103,15 @@ function App() {
       <div className="app">
         <header className="header">
           <h1>Indfødsretsprøven</h1>
+          {Object.keys(ratingLevelCounts).length > 0 && (
+            <div className="rating-level-stats">
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                <div key={level} className="rating-level-item" title={`Level ${level}: ${ratingLevelCounts[level] || 0} questions`}>
+                  <span className="rating-level-count">{ratingLevelCounts[level] || 0}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </header>
         <main id="main-content">
           {renderMainContent()}
