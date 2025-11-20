@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, getAllQuestionsForStats } from './api'
 import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState, loadQuestionStates } from './questionState'
 import { playFeedback, isSoundEnabled, isHapticEnabled, setSoundEnabled, setHapticEnabled, isHapticSupported } from './feedback'
+import { recordAnswer } from './metrics'
+import { MetricsView } from './MetricsView'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -39,6 +41,7 @@ function App() {
   const [soundEnabled, setSoundEnabledState] = useState(() => isSoundEnabled())
   const [hapticEnabled, setHapticEnabledState] = useState(() => isHapticEnabled())
   const [ratingLevelCounts, setRatingLevelCounts] = useState<{ [level: number]: number }>({})
+  const [showMetrics, setShowMetrics] = useState(false)
 
 
   // Apply dark mode to document
@@ -265,6 +268,17 @@ function App() {
       total: prev.total + 1
     }))
 
+    // Record answer in metrics
+    if (question) {
+      recordAnswer(
+        question.id,
+        isCorrect,
+        question.question,
+        question.section || 'Unknown',
+        question.quiz || 'Unknown'
+      )
+    }
+
     // Auto-update rating based on answer
     if (question) {
       const updatedState = updateRatingAfterAnswer(question.id, isCorrect)
@@ -485,129 +499,6 @@ function App() {
       {!settingsCollapsed && <div id="settings-content" className="settings-content">
         <div className="settings-section">
           <div className="settings-section-header">
-            <h3>Appearance</h3>
-          </div>
-          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span id="dark-mode-label">Dark Mode</span>
-            <button
-              onClick={() => {
-                playFeedback('toggle')
-                setDarkMode(!darkMode)
-              }}
-              role="switch"
-              aria-checked={darkMode}
-              aria-labelledby="dark-mode-label"
-              style={{
-                position: 'relative',
-                width: '44px',
-                height: '24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: darkMode ? 'var(--color-primary)' : 'var(--color-border)',
-                cursor: 'pointer',
-                transition: 'background 0.2s ease',
-                padding: 0
-              }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  left: darkMode ? '22px' : '2px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                }}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span id="sound-label">Sound Effects</span>
-            <button
-              onClick={toggleSoundEnabled}
-              role="switch"
-              aria-checked={soundEnabled}
-              aria-labelledby="sound-label"
-              style={{
-                position: 'relative',
-                width: '44px',
-                height: '24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: soundEnabled ? 'var(--color-primary)' : 'var(--color-border)',
-                cursor: 'pointer',
-                transition: 'background 0.2s ease',
-                padding: 0
-              }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  left: soundEnabled ? '22px' : '2px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                }}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span id="haptic-label">
-              Haptic Feedback
-              {!isHapticSupported() && (
-                <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '6px' }}>
-                  (not supported)
-                </span>
-              )}
-            </span>
-            <button
-              onClick={toggleHapticEnabled}
-              role="switch"
-              aria-checked={hapticEnabled}
-              aria-labelledby="haptic-label"
-              disabled={!isHapticSupported()}
-              style={{
-                position: 'relative',
-                width: '44px',
-                height: '24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: hapticEnabled ? 'var(--color-primary)' : 'var(--color-border)',
-                cursor: isHapticSupported() ? 'pointer' : 'not-allowed',
-                transition: 'background 0.2s ease',
-                padding: 0,
-                opacity: isHapticSupported() ? 1 : 0.5
-              }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '2px',
-                  left: hapticEnabled ? '22px' : '2px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
-                }}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-section">
-          <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
             <div className="settings-actions">
               <button onClick={selectAllQuizzes} className="text-button">All</button>
@@ -791,6 +682,129 @@ function App() {
 
         <div className="settings-section">
           <div className="settings-section-header">
+            <h3>Appearance</h3>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="dark-mode-label">Dark Mode</span>
+            <button
+              onClick={() => {
+                playFeedback('toggle')
+                setDarkMode(!darkMode)
+              }}
+              role="switch"
+              aria-checked={darkMode}
+              aria-labelledby="dark-mode-label"
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: darkMode ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                padding: 0
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: darkMode ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="sound-label">Sound Effects</span>
+            <button
+              onClick={toggleSoundEnabled}
+              role="switch"
+              aria-checked={soundEnabled}
+              aria-labelledby="sound-label"
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: soundEnabled ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                padding: 0
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: soundEnabled ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+          <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
+            <span id="haptic-label">
+              Haptic Feedback
+              {!isHapticSupported() && (
+                <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '6px' }}>
+                  (not supported)
+                </span>
+              )}
+            </span>
+            <button
+              onClick={toggleHapticEnabled}
+              role="switch"
+              aria-checked={hapticEnabled}
+              aria-labelledby="haptic-label"
+              disabled={!isHapticSupported()}
+              style={{
+                position: 'relative',
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: hapticEnabled ? 'var(--color-primary)' : 'var(--color-border)',
+                cursor: isHapticSupported() ? 'pointer' : 'not-allowed',
+                transition: 'background 0.2s ease',
+                padding: 0,
+                opacity: isHapticSupported() ? 1 : 0.5
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: hapticEnabled ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)'
+                }}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-header">
             <h3>Question Order</h3>
           </div>
           <label className="checkbox-item">
@@ -941,6 +955,32 @@ function App() {
             <h3>State Management</h3>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+            <button
+              onClick={() => {
+                playFeedback('tap')
+                setShowMetrics(true)
+              }}
+              className="text-button"
+              style={{
+                padding: '10px 16px',
+                background: 'var(--color-primary)',
+                color: 'white',
+                border: '1px solid var(--color-primary)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1'
+              }}
+            >
+              View Metrics
+            </button>
             <button
               onClick={handleDownloadState}
               className="text-button"
@@ -1352,6 +1392,40 @@ function App() {
                 Reset
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Metrics View Modal */}
+      {showMetrics && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'var(--color-modal-overlay)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+            overflowY: 'auto'
+          }}
+          onClick={() => setShowMetrics(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setShowMetrics(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '1000px',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            <MetricsView onClose={() => setShowMetrics(false)} />
           </div>
         </div>
       )}
