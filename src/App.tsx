@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, getAllQuestionsForStats } from './api'
 import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState, loadQuestionStates } from './questionState'
-import { playFeedback, isSoundEnabled, isHapticEnabled, setSoundEnabled, setHapticEnabled } from './feedback'
+import { playFeedback, isSoundEnabled, isHapticEnabled, setSoundEnabled, setHapticEnabled, isHapticSupported } from './feedback'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -375,10 +375,11 @@ function App() {
   }
 
   const toggleHapticEnabled = () => {
+    // Play feedback BEFORE toggling so user feels confirmation even when turning off
+    playFeedback('toggle')
     setHapticEnabledState(prev => {
       const newValue = !prev
       setHapticEnabled(newValue)
-      playFeedback('toggle') // Play feedback to demonstrate
       return newValue
     })
   }
@@ -560,12 +561,20 @@ function App() {
             </button>
           </div>
           <div className="checkbox-item" style={{ justifyContent: 'space-between' }}>
-            <span id="haptic-label">Haptic Feedback</span>
+            <span id="haptic-label">
+              Haptic Feedback
+              {!isHapticSupported() && (
+                <span style={{ fontSize: '0.75rem', opacity: 0.6, marginLeft: '6px' }}>
+                  (not supported)
+                </span>
+              )}
+            </span>
             <button
               onClick={toggleHapticEnabled}
               role="switch"
               aria-checked={hapticEnabled}
               aria-labelledby="haptic-label"
+              disabled={!isHapticSupported()}
               style={{
                 position: 'relative',
                 width: '44px',
@@ -573,9 +582,10 @@ function App() {
                 borderRadius: '12px',
                 border: 'none',
                 background: hapticEnabled ? 'var(--color-primary)' : 'var(--color-border)',
-                cursor: 'pointer',
+                cursor: isHapticSupported() ? 'pointer' : 'not-allowed',
                 transition: 'background 0.2s ease',
-                padding: 0
+                padding: 0,
+                opacity: isHapticSupported() ? 1 : 0.5
               }}
             >
               <span
