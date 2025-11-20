@@ -106,10 +106,10 @@
   --color-success-border: #10b981;
   --color-success-text: #6ee7b7;
   --color-success-border-light: #065f46;
-  --color-error-bg: #3d2020;
-  --color-error-border: #9b5858;
-  --color-error-text: #d4a5a5;
-  --color-error-border-light: #5c3333;
+  --color-error-bg: #5c1a1a;
+  --color-error-border: #dc2626;
+  --color-error-text: #fca5a5;
+  --color-error-border-light: #7f1d1d;
 
   /* Shadow colors */
   --color-shadow: rgba(0, 0, 0, 0.3);
@@ -349,9 +349,18 @@ body {
 }
 
 .option-button.incorrect {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-border);
-  color: var(--color-error-text);
+  background: var(--color-error-bg) !important;
+  border-color: var(--color-error-border) !important;
+  color: var(--color-error-text) !important;
+}
+
+.option-button.incorrect:focus,
+.option-button.incorrect:active,
+.option-button.incorrect:hover {
+  background: var(--color-error-bg) !important;
+  border-color: var(--color-error-border) !important;
+  color: var(--color-error-text) !important;
+  transform: none;
 }
 
 .next-hint {
