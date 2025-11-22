@@ -335,6 +335,13 @@ body {
   opacity: 0.5;
 }
 
+.option-button.selected {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
 .option-button.correct {
   background: var(--color-success-bg);
   border-color: var(--color-success-border);
