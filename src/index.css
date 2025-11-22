@@ -704,8 +704,7 @@ body {
   }
 
   .settings-panel {
-    width: 100%;
-    max-height: none;
+    display: none;
   }
 
   .app {
