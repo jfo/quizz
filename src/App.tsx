@@ -43,6 +43,15 @@ function App() {
   const [ratingLevelCounts, setRatingLevelCounts] = useState<{ [level: number]: number }>({})
   const [showMetrics, setShowMetrics] = useState(false)
 
+  // Test mode states
+  const [testMode, setTestMode] = useState(false)
+  const [testQuestions, setTestQuestions] = useState<Question[]>([])
+  const [testAnswers, setTestAnswers] = useState<Map<string, { selectedOptionIndex: number, isCorrect: boolean }>>(new Map())
+  const [currentTestIndex, setCurrentTestIndex] = useState(0)
+  const [showTestResults, setShowTestResults] = useState(false)
+  const [reviewMode, setReviewMode] = useState(false)
+  const [reviewQuestions, setReviewQuestions] = useState<Question[]>([])
+
 
   // Apply dark mode to document
   useEffect(() => {
@@ -398,6 +407,238 @@ function App() {
     })
   }
 
+  const toggleTestMode = async () => {
+    playFeedback('toggle')
+    const newValue = !testMode
+    setTestMode(newValue)
+
+    if (newValue) {
+      // Starting test mode - load all questions
+      await startTest()
+    } else {
+      // Exiting test mode - reset test state
+      resetTestState()
+      loadQuestion()
+    }
+  }
+
+  const startTest = async () => {
+    try {
+      setLoading(true)
+      const sections = selectedSections.length > 0 ? selectedSections : undefined
+      const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
+
+      // Get all questions for the selected quizzes
+      let allQuestions = await getAllQuestionsForStats(sections, quizzes)
+
+      // Apply rating filter if set
+      if (ratingFilter) {
+        const states = loadQuestionStates()
+        allQuestions = allQuestions.filter(q => {
+          const state = states[q.id] || { rating: 0 }
+          const rating = Math.min(10, Math.max(0, state.rating))
+          return rating >= ratingFilter[0] && rating <= ratingFilter[1]
+        })
+      }
+
+      // Shuffle questions if shuffle mode is on
+      if (shuffleMode) {
+        allQuestions = shuffleArray(allQuestions)
+      }
+
+      setTestQuestions(allQuestions)
+      setTestAnswers(new Map())
+      setCurrentTestIndex(0)
+      setShowTestResults(false)
+      setReviewMode(false)
+
+      // Load first question
+      if (allQuestions.length > 0) {
+        setQuestion(allQuestions[0])
+        setShuffledOptions(shuffleArray(allQuestions[0].options))
+        setSelectedOption(null)
+        setAnswered(false)
+      }
+    } catch (err) {
+      console.error('Failed to start test:', err)
+      setError('Failed to start test')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetTestState = () => {
+    setTestQuestions([])
+    setTestAnswers(new Map())
+    setCurrentTestIndex(0)
+    setShowTestResults(false)
+    setReviewMode(false)
+    setReviewQuestions([])
+  }
+
+  const handleTestOptionClick = (index: number) => {
+    if (!question) return
+
+    playFeedback('tap')
+    setSelectedOption(index)
+    setAnswered(true)
+
+    const isCorrect = shuffledOptions[index].correct
+
+    // Store the answer
+    const newAnswers = new Map(testAnswers)
+    newAnswers.set(question.id, { selectedOptionIndex: index, isCorrect })
+    setTestAnswers(newAnswers)
+  }
+
+  const goToNextTestQuestion = () => {
+    if (currentTestIndex < testQuestions.length - 1) {
+      playFeedback('move')
+      const nextIndex = currentTestIndex + 1
+      setCurrentTestIndex(nextIndex)
+
+      const nextQuestion = testQuestions[nextIndex]
+      setQuestion(nextQuestion)
+      setShuffledOptions(shuffleArray(nextQuestion.options))
+
+      // Check if this question was already answered
+      const existingAnswer = testAnswers.get(nextQuestion.id)
+      if (existingAnswer) {
+        setSelectedOption(existingAnswer.selectedOptionIndex)
+        setAnswered(true)
+      } else {
+        setSelectedOption(null)
+        setAnswered(false)
+      }
+    } else {
+      // Last question - finish test
+      finishTest()
+    }
+  }
+
+  const goToPreviousTestQuestion = () => {
+    if (currentTestIndex > 0) {
+      playFeedback('move')
+      const prevIndex = currentTestIndex - 1
+      setCurrentTestIndex(prevIndex)
+
+      const prevQuestion = testQuestions[prevIndex]
+      setQuestion(prevQuestion)
+      setShuffledOptions(shuffleArray(prevQuestion.options))
+
+      // Restore previous answer
+      const existingAnswer = testAnswers.get(prevQuestion.id)
+      if (existingAnswer) {
+        setSelectedOption(existingAnswer.selectedOptionIndex)
+        setAnswered(true)
+      } else {
+        setSelectedOption(null)
+        setAnswered(false)
+      }
+    }
+  }
+
+  const finishTest = () => {
+    playFeedback('success')
+    setShowTestResults(true)
+
+    // Record all answers in metrics
+    testQuestions.forEach(q => {
+      const answer = testAnswers.get(q.id)
+      if (answer) {
+        recordAnswer(
+          q.id,
+          answer.isCorrect,
+          q.question,
+          q.section || 'Unknown',
+          q.quiz || 'Unknown'
+        )
+        // Update ratings
+        updateRatingAfterAnswer(q.id, answer.isCorrect)
+      }
+    })
+
+    // Update session stats
+    const correctCount = Array.from(testAnswers.values()).filter(a => a.isCorrect).length
+    setSessionStats(prev => ({
+      correct: prev.correct + correctCount,
+      total: prev.total + testAnswers.size
+    }))
+
+    // Refresh stats
+    loadStats()
+  }
+
+  const startReview = () => {
+    // Get questions that were answered incorrectly
+    const missed = testQuestions.filter(q => {
+      const answer = testAnswers.get(q.id)
+      return answer && !answer.isCorrect
+    })
+
+    if (missed.length === 0) {
+      // No missed questions - exit test mode
+      resetTestState()
+      setTestMode(false)
+      loadQuestion()
+      return
+    }
+
+    setReviewQuestions(missed)
+    setReviewMode(true)
+    setShowTestResults(false)
+    setCurrentTestIndex(0)
+
+    // Load first review question
+    setQuestion(missed[0])
+    setShuffledOptions(shuffleArray(missed[0].options))
+    setSelectedOption(null)
+    setAnswered(false)
+  }
+
+  const handleReviewOptionClick = async (index: number) => {
+    if (!question) return
+
+    // If already answered, clicking the correct answer advances to next question
+    if (answered) {
+      if (shuffledOptions[index].correct) {
+        playFeedback('move')
+
+        // Move to next review question or finish
+        if (currentTestIndex < reviewQuestions.length - 1) {
+          const nextIndex = currentTestIndex + 1
+          setCurrentTestIndex(nextIndex)
+
+          const nextQuestion = reviewQuestions[nextIndex]
+          setQuestion(nextQuestion)
+          setShuffledOptions(shuffleArray(nextQuestion.options))
+          setSelectedOption(null)
+          setAnswered(false)
+        } else {
+          // Finished reviewing all missed questions
+          resetTestState()
+          setTestMode(false)
+          loadQuestion()
+        }
+      }
+      return
+    }
+
+    // First time answering in review mode
+    playFeedback('tap')
+    setSelectedOption(index)
+    setAnswered(true)
+
+    const isCorrect = shuffledOptions[index].correct
+
+    // Play success or error feedback
+    if (isCorrect) {
+      playFeedback('success')
+    } else {
+      playFeedback('error')
+    }
+  }
+
   const handleDownloadState = () => {
     const stateJson = exportState()
     const blob = new Blob([stateJson], { type: 'application/json' })
@@ -459,6 +700,141 @@ function App() {
     const sectionQuizUrls = sectionData.quizzes.map(q => q.url)
     setSelectedQuizzes(sectionQuizUrls)
     localStorage.setItem('selectedQuizzes', JSON.stringify(sectionQuizUrls))
+  }
+
+  const renderTestResults = () => {
+    const totalQuestions = testQuestions.length
+    const correctCount = Array.from(testAnswers.values()).filter(a => a.isCorrect).length
+    const incorrectCount = totalQuestions - correctCount
+    const score = totalQuestions > 0 ? ((correctCount / totalQuestions) * 100).toFixed(1) : '0.0'
+
+    const missedQuestions = testQuestions.filter(q => {
+      const answer = testAnswers.get(q.id)
+      return answer && !answer.isCorrect
+    })
+
+    return (
+      <div className="content">
+        <div className="question-card" style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '2rem', fontWeight: '600', marginBottom: '24px' }}>Test Results</h2>
+
+          <div style={{ fontSize: '4rem', fontWeight: '700', color: 'var(--color-primary)', marginBottom: '16px' }}>
+            {score}%
+          </div>
+
+          <div style={{ fontSize: '1.25rem', marginBottom: '32px', color: 'var(--color-text-muted)' }}>
+            {correctCount} out of {totalQuestions} correct
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '16px',
+            marginBottom: '32px',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              padding: '20px',
+              background: 'var(--color-success-bg)',
+              border: '2px solid var(--color-success-border)',
+              borderRadius: '12px'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: '600', color: 'var(--color-success-border)' }}>
+                {correctCount}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                Correct
+              </div>
+            </div>
+            <div style={{
+              padding: '20px',
+              background: 'var(--color-error-bg)',
+              border: '2px solid var(--color-error-border)',
+              borderRadius: '12px'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: '600', color: 'var(--color-error-border)' }}>
+                {incorrectCount}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                Incorrect
+              </div>
+            </div>
+          </div>
+
+          {missedQuestions.length > 0 && (
+            <>
+              <div style={{
+                marginBottom: '16px',
+                padding: '16px',
+                background: 'var(--color-bg-hover)',
+                borderRadius: '8px',
+                textAlign: 'left'
+              }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '12px' }}>
+                  Questions you missed ({missedQuestions.length}):
+                </h3>
+                <div style={{
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  fontSize: '0.875rem',
+                  color: 'var(--color-text-secondary)'
+                }}>
+                  {missedQuestions.map((q, idx) => (
+                    <div key={q.id} style={{
+                      padding: '8px 0',
+                      borderBottom: idx < missedQuestions.length - 1 ? '1px solid var(--color-border)' : 'none'
+                    }}>
+                      {idx + 1}. {q.question}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={startReview}
+                style={{
+                  padding: '16px 32px',
+                  background: 'var(--color-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s',
+                  marginBottom: '12px',
+                  width: '100%'
+                }}
+              >
+                Review Missed Questions
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={() => {
+              resetTestState()
+              setTestMode(false)
+              loadQuestion()
+            }}
+            style={{
+              padding: '12px 24px',
+              background: 'transparent',
+              color: 'var(--color-text-placeholder)',
+              border: '2px solid var(--color-border)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+              transition: 'all 0.2s',
+              width: '100%'
+            }}
+          >
+            Exit Test Mode
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const renderSettingsPanel = () => (
@@ -805,6 +1181,25 @@ function App() {
 
         <div className="settings-section">
           <div className="settings-section-header">
+            <h3>Mode</h3>
+          </div>
+          <label className="checkbox-item">
+            <input
+              type="checkbox"
+              checked={testMode}
+              onChange={toggleTestMode}
+            />
+            <span>Test Mode (answer all questions, then review mistakes)</span>
+          </label>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-placeholder)', marginTop: '8px', paddingLeft: '38px' }}>
+            {testMode
+              ? 'Answer all questions without feedback, then see your score and review mistakes'
+              : 'Practice mode with immediate feedback after each question'}
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-header">
             <h3>Question Order</h3>
           </div>
           <label className="checkbox-item">
@@ -812,6 +1207,7 @@ function App() {
               type="checkbox"
               checked={mostNeededMode}
               onChange={toggleMostNeededMode}
+              disabled={testMode}
             />
             <span>Most needed order (prioritize questions you know least)</span>
           </label>
@@ -1088,11 +1484,16 @@ function App() {
       )
     }
 
+    // Show test results
+    if (testMode && showTestResults) {
+      return renderTestResults()
+    }
+
     const correctOptionIndex = shuffledOptions.findIndex(opt => opt.correct)
 
     return (
       <>
-        {stats && (
+        {stats && !testMode && (
           <div className="stats-bar">
             <div className="stat">
               <div className="stat-value">{stats.totalQuestions}</div>
@@ -1103,6 +1504,28 @@ function App() {
                 {sessionStats.total > 0 ? ((sessionStats.correct / sessionStats.total) * 100).toFixed(1) : '0.0'}%
               </div>
               <div className="stat-label">Session ({sessionStats.total})</div>
+            </div>
+          </div>
+        )}
+
+        {testMode && !reviewMode && (
+          <div className="stats-bar">
+            <div className="stat">
+              <div className="stat-value">{currentTestIndex + 1} / {testQuestions.length}</div>
+              <div className="stat-label">Question</div>
+            </div>
+            <div className="stat">
+              <div className="stat-value">{testAnswers.size}</div>
+              <div className="stat-label">Answered</div>
+            </div>
+          </div>
+        )}
+
+        {reviewMode && (
+          <div className="stats-bar">
+            <div className="stat">
+              <div className="stat-value">{currentTestIndex + 1} / {reviewQuestions.length}</div>
+              <div className="stat-label">Reviewing Mistakes</div>
             </div>
           </div>
         )}
@@ -1123,7 +1546,13 @@ function App() {
               {shuffledOptions.map((option, index) => {
                 let className = 'option-button'
 
-                if (answered) {
+                // In test mode (non-review), only highlight selected option
+                if (testMode && !reviewMode) {
+                  if (index === selectedOption) {
+                    className += ' selected'
+                  }
+                } else if (answered) {
+                  // In normal mode or review mode, show correct/incorrect
                   if (index === correctOptionIndex) {
                     className += ' correct'
                   } else if (index === selectedOption) {
@@ -1132,13 +1561,19 @@ function App() {
                 }
 
                 const isCorrect = option.correct
-                const canAdvance = answered && isCorrect
+                const canAdvance = answered && isCorrect && !testMode
+
+                const handleClick = testMode && !reviewMode
+                  ? handleTestOptionClick
+                  : reviewMode
+                    ? handleReviewOptionClick
+                    : handleOptionClick
 
                 return (
                   <button
                     key={index}
                     className={className}
-                    onClick={() => handleOptionClick(index)}
+                    onClick={() => handleClick(index)}
                     style={canAdvance ? { cursor: 'pointer' } : undefined}
                   >
                     {showTranslations && option.textEn ? option.textEn : option.text}
@@ -1148,7 +1583,46 @@ function App() {
               })}
             </div>
 
-            {answered && (
+            {/* Navigation for test mode */}
+            {testMode && !reviewMode && (
+              <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  onClick={goToPreviousTestQuestion}
+                  disabled={currentTestIndex === 0}
+                  style={{
+                    padding: '12px 24px',
+                    background: currentTestIndex === 0 ? 'var(--color-bg-card)' : 'var(--color-primary)',
+                    color: currentTestIndex === 0 ? 'var(--color-text-placeholder)' : 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: currentTestIndex === 0 ? 'not-allowed' : 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  ← Previous
+                </button>
+                <button
+                  onClick={goToNextTestQuestion}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'var(--color-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {currentTestIndex === testQuestions.length - 1 ? 'Finish Test' : 'Next →'}
+                </button>
+              </div>
+            )}
+
+            {answered && (!testMode || reviewMode) && (
               <div
                 className={`feedback ${selectedOption === correctOptionIndex ? 'correct' : 'incorrect'}`}
                 role="alert"

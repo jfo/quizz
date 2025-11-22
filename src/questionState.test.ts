@@ -209,7 +209,7 @@ describe('questionState', () => {
 
     it('should import valid state from JSON string', () => {
       const states: QuestionStates = {
-        'q1': { rating: 3, selfRating: 0, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
+        'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
       }
       const json = JSON.stringify(states)
 
