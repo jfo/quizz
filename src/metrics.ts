@@ -12,6 +12,33 @@ export interface AnswerAttempt {
   quiz: string;
 }
 
+export interface DailyStats {
+  date: string;
+  correct: number;
+  incorrect: number;
+  total: number;
+  accuracy: number;
+  timestamp: number; // Start of day timestamp for sorting
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  accuracy: number;
+  total: number;
+  timestamp: number;
+}
+
+export interface TrendAnalysis {
+  overallTrend: 'improving' | 'stable' | 'declining' | 'insufficient_data';
+  trendPercentage: number; // Percentage change
+  bestDay: DailyStats | null;
+  worstDay: DailyStats | null;
+  averageAccuracy: number;
+  totalQuestions: number;
+  currentStreak: number; // Days with activity
+  averageQuestionsPerDay: number;
+}
+
 export interface MetricsSummary {
   totalAttempts: number;
   correctAttempts: number;
@@ -20,6 +47,9 @@ export interface MetricsSummary {
   attemptsByDay: { [date: string]: { correct: number; incorrect: number } };
   recentAttempts: AnswerAttempt[];
   questionBreakdown: { [questionId: string]: { correct: number; incorrect: number; questionText: string } };
+  dailyStats: DailyStats[]; // Sorted by date
+  timeSeriesData: TimeSeriesPoint[];
+  trendAnalysis: TrendAnalysis;
 }
 
 const METRICS_STORAGE_KEY = 'quizMetrics';
@@ -82,6 +112,107 @@ export function recordAnswer(
 }
 
 /**
+ * Calculate trend analysis from daily stats
+ */
+function calculateTrendAnalysis(dailyStats: DailyStats[]): TrendAnalysis {
+  if (dailyStats.length === 0) {
+    return {
+      overallTrend: 'insufficient_data',
+      trendPercentage: 0,
+      bestDay: null,
+      worstDay: null,
+      averageAccuracy: 0,
+      totalQuestions: 0,
+      currentStreak: 0,
+      averageQuestionsPerDay: 0,
+    };
+  }
+
+  // Calculate average accuracy
+  const totalQuestions = dailyStats.reduce((sum, day) => sum + day.total, 0);
+  const totalCorrect = dailyStats.reduce((sum, day) => sum + day.correct, 0);
+  const averageAccuracy = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
+
+  // Find best and worst days
+  const daysWithAttempts = dailyStats.filter(day => day.total > 0);
+  let bestDay: DailyStats | null = null;
+  let worstDay: DailyStats | null = null;
+
+  if (daysWithAttempts.length > 0) {
+    bestDay = daysWithAttempts.reduce((best, day) =>
+      day.accuracy > best.accuracy ? day : best
+    );
+    worstDay = daysWithAttempts.reduce((worst, day) =>
+      day.accuracy < worst.accuracy ? day : worst
+    );
+  }
+
+  // Calculate current streak (consecutive days with activity)
+  let currentStreak = 0;
+  const sortedDays = [...dailyStats].sort((a, b) => b.timestamp - a.timestamp);
+  const today = new Date().toISOString().split('T')[0];
+
+  for (let i = 0; i < sortedDays.length; i++) {
+    const day = sortedDays[i];
+    if (day.total > 0) {
+      const dayDate = new Date(day.timestamp);
+      const expectedDate = new Date();
+      expectedDate.setDate(expectedDate.getDate() - currentStreak);
+      const expectedDateStr = expectedDate.toISOString().split('T')[0];
+
+      if (day.date === expectedDateStr || (currentStreak === 0 && day.date === today)) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+  }
+
+  // Calculate average questions per active day
+  const activeDays = daysWithAttempts.length;
+  const averageQuestionsPerDay = activeDays > 0 ? totalQuestions / activeDays : 0;
+
+  // Calculate trend (compare first half to second half)
+  let overallTrend: 'improving' | 'stable' | 'declining' | 'insufficient_data' = 'insufficient_data';
+  let trendPercentage = 0;
+
+  if (daysWithAttempts.length >= 4) {
+    const midpoint = Math.floor(daysWithAttempts.length / 2);
+    const firstHalf = daysWithAttempts.slice(0, midpoint);
+    const secondHalf = daysWithAttempts.slice(midpoint);
+
+    const firstHalfCorrect = firstHalf.reduce((sum, day) => sum + day.correct, 0);
+    const firstHalfTotal = firstHalf.reduce((sum, day) => sum + day.total, 0);
+    const firstHalfAccuracy = firstHalfTotal > 0 ? (firstHalfCorrect / firstHalfTotal) * 100 : 0;
+
+    const secondHalfCorrect = secondHalf.reduce((sum, day) => sum + day.correct, 0);
+    const secondHalfTotal = secondHalf.reduce((sum, day) => sum + day.total, 0);
+    const secondHalfAccuracy = secondHalfTotal > 0 ? (secondHalfCorrect / secondHalfTotal) * 100 : 0;
+
+    trendPercentage = secondHalfAccuracy - firstHalfAccuracy;
+
+    if (Math.abs(trendPercentage) < 5) {
+      overallTrend = 'stable';
+    } else if (trendPercentage > 0) {
+      overallTrend = 'improving';
+    } else {
+      overallTrend = 'declining';
+    }
+  }
+
+  return {
+    overallTrend,
+    trendPercentage,
+    bestDay,
+    worstDay,
+    averageAccuracy,
+    totalQuestions,
+    currentStreak,
+    averageQuestionsPerDay,
+  };
+}
+
+/**
  * Get metrics summary with various statistics
  */
 export function getMetricsSummary(): MetricsSummary {
@@ -96,6 +227,18 @@ export function getMetricsSummary(): MetricsSummary {
       attemptsByDay: {},
       recentAttempts: [],
       questionBreakdown: {},
+      dailyStats: [],
+      timeSeriesData: [],
+      trendAnalysis: {
+        overallTrend: 'insufficient_data',
+        trendPercentage: 0,
+        bestDay: null,
+        worstDay: null,
+        averageAccuracy: 0,
+        totalQuestions: 0,
+        currentStreak: 0,
+        averageQuestionsPerDay: 0,
+      },
     };
   }
 
@@ -115,6 +258,32 @@ export function getMetricsSummary(): MetricsSummary {
       attemptsByDay[date].incorrect++;
     }
   });
+
+  // Create daily stats array
+  const dailyStats: DailyStats[] = Object.entries(attemptsByDay)
+    .map(([date, data]) => {
+      const total = data.correct + data.incorrect;
+      return {
+        date,
+        correct: data.correct,
+        incorrect: data.incorrect,
+        total,
+        accuracy: total > 0 ? (data.correct / total) * 100 : 0,
+        timestamp: new Date(date).getTime(),
+      };
+    })
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  // Create time series data (for line charts)
+  const timeSeriesData: TimeSeriesPoint[] = dailyStats.map(day => ({
+    date: day.date,
+    accuracy: day.accuracy,
+    total: day.total,
+    timestamp: day.timestamp,
+  }));
+
+  // Calculate trend analysis
+  const trendAnalysis = calculateTrendAnalysis(dailyStats);
 
   // Group attempts by question
   const questionBreakdown: { [questionId: string]: { correct: number; incorrect: number; questionText: string } } = {};
@@ -144,6 +313,9 @@ export function getMetricsSummary(): MetricsSummary {
     attemptsByDay,
     recentAttempts,
     questionBreakdown,
+    dailyStats,
+    timeSeriesData,
+    trendAnalysis,
   };
 }
 
