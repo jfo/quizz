@@ -496,7 +496,7 @@ function App() {
           </button>
         )}
       </div>
-      {!settingsCollapsed && <div id="settings-content" className="settings-content">
+      <div id="settings-content" className={`settings-content ${settingsCollapsed ? 'collapsed' : ''}`}>
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
@@ -1061,7 +1061,7 @@ function App() {
             Save or load your ratings and progress
           </div>
         </div>
-      </div>}
+      </div>
     </aside>
   )
 

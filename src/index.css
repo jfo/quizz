@@ -455,10 +455,20 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
+.settings-header button[aria-expanded] span:first-child {
+  display: none;
+}
+
+.settings-header button[aria-expanded] {
+  cursor: default;
+  pointer-events: none;
+}
+
 .settings-content {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  display: block !important;
 }
 
 .settings-section {
@@ -704,6 +714,20 @@ body {
   }
 
   .settings-panel {
+    width: 100%;
+    max-height: none;
+  }
+
+  .settings-header button[aria-expanded] span:first-child {
+    display: inline;
+  }
+
+  .settings-header button[aria-expanded] {
+    cursor: pointer;
+    pointer-events: all;
+  }
+
+  .settings-content.collapsed {
     display: none;
   }
 
