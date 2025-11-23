@@ -11,6 +11,7 @@ BRANCH="gh-pages"
 
 # Step 1: Build the project
 echo "📦 Building the project..."
+echo "URL: $VITE_SUPABASE_URL"
 npm run build
 
 # Check if build was successful
