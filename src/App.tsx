@@ -81,7 +81,7 @@ function App() {
   // Auth state management and sync
   useEffect(() => {
     // Skip auth setup if Supabase is not configured
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured || !supabase) {
       console.log('Supabase not configured - auth disabled');
       return;
     }
