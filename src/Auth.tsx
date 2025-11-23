@@ -93,7 +93,7 @@ export function Auth({ onClose }: AuthProps) {
     }}>
       <div style={{
         backgroundColor: 'var(--color-bg)',
-        color: 'var(--color-text)',
+        color: 'var(--color-text-primary)',
         padding: '2rem',
         borderRadius: '8px',
         maxWidth: '400px',
@@ -107,7 +107,7 @@ export function Auth({ onClose }: AuthProps) {
           alignItems: 'center',
           marginBottom: '1.5rem',
         }}>
-          <h2 style={{ margin: 0, color: 'var(--color-text)' }}>
+          <h2 style={{ margin: 0, color: 'var(--color-text-primary)' }}>
             {isSignUp ? 'Sign Up' : 'Sign In'}
           </h2>
           <button
@@ -117,7 +117,7 @@ export function Auth({ onClose }: AuthProps) {
               border: 'none',
               fontSize: '1.5rem',
               cursor: 'pointer',
-              color: 'var(--color-text)',
+              color: 'var(--color-text-primary)',
             }}
           >
             ×
@@ -199,7 +199,7 @@ export function Auth({ onClose }: AuthProps) {
 
         <form onSubmit={handleEmailAuth}>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text)' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
               Email
             </label>
             <input
@@ -214,13 +214,13 @@ export function Auth({ onClose }: AuthProps) {
                 borderRadius: '4px',
                 border: '1px solid var(--color-border)',
                 backgroundColor: 'var(--color-bg)',
-                color: 'var(--color-text)',
+                color: 'var(--color-text-primary)',
               }}
             />
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text)' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
               Password
             </label>
             <input
@@ -236,7 +236,7 @@ export function Auth({ onClose }: AuthProps) {
                 borderRadius: '4px',
                 border: '1px solid var(--color-border)',
                 backgroundColor: 'var(--color-bg)',
-                color: 'var(--color-text)',
+                color: 'var(--color-text-primary)',
               }}
             />
           </div>

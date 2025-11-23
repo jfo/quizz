@@ -32,7 +32,7 @@ export function UserProfile({ user }: UserProfileProps) {
         style={{
           padding: '0.5rem 1rem',
           backgroundColor: 'transparent',
-          color: 'var(--color-text)',
+          color: 'var(--color-text-primary)',
           border: '1px solid var(--color-border)',
           borderRadius: '4px',
           cursor: 'pointer',
