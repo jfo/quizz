@@ -80,13 +80,17 @@ function App() {
 
   // Auth state management and sync
   useEffect(() => {
+    console.log('Setting up auth listener');
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email || 'no user');
       setUser(session?.user ?? null)
       setCurrentUser(session?.user ?? null)
     })
 
     // Listen for auth changes
+    console.log('Registering onAuthStateChange listener');
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {

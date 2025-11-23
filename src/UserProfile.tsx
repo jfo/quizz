@@ -10,17 +10,23 @@ export function UserProfile({ user }: UserProfileProps) {
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
+    console.log('Sign out button clicked');
     setSigningOut(true);
     try {
+      console.log('Calling supabase.auth.signOut()');
       const { error } = await supabase.auth.signOut();
+      console.log('Sign out response:', { error });
       if (error) {
         console.error('Sign out error:', error);
         alert('Failed to sign out: ' + error.message);
+      } else {
+        console.log('Sign out successful');
       }
     } catch (err) {
-      console.error('Sign out error:', err);
+      console.error('Sign out exception:', err);
       alert('Failed to sign out');
     } finally {
+      console.log('Sign out finally block');
       setSigningOut(false);
     }
   };
