@@ -5,8 +5,7 @@ This guide will walk you through setting up Supabase for authentication and clou
 ## Overview
 
 The quiz app now supports:
-- **Username/password authentication**
-- **SSO (Google & GitHub)**
+- **Email/password authentication**
 - **Cloud progress sync** across devices
 - **Automatic migration** of existing localStorage data
 
@@ -32,39 +31,7 @@ The quiz app now supports:
    - `metrics`
    - `user_preferences`
 
-## Step 3: Configure Authentication Providers
-
-### Email/Password (Already enabled by default)
-
-Email/password authentication is enabled by default. No additional configuration needed!
-
-### Google OAuth (Optional but Recommended)
-
-1. Go to **Authentication** → **Providers** in your Supabase dashboard
-2. Find **Google** and click to expand
-3. Toggle **Enable Sign in with Google**
-4. Follow the Supabase guide to:
-   - Create a Google Cloud project
-   - Set up OAuth consent screen
-   - Create OAuth credentials
-   - Add authorized redirect URI: `https://<your-project-ref>.supabase.co/auth/v1/callback`
-5. Paste your **Client ID** and **Client Secret** from Google
-6. Click **Save**
-
-### GitHub OAuth (Optional)
-
-1. Go to **Authentication** → **Providers** in your Supabase dashboard
-2. Find **GitHub** and click to expand
-3. Toggle **Enable Sign in with GitHub**
-4. Follow the Supabase guide to:
-   - Go to GitHub Settings → Developer settings → OAuth Apps
-   - Click "New OAuth App"
-   - Fill in the form with Authorization callback URL: `https://<your-project-ref>.supabase.co/auth/v1/callback`
-   - Get your Client ID and Client Secret
-5. Paste credentials into Supabase
-6. Click **Save**
-
-## Step 4: Configure Email Settings (Optional)
+## Step 3: Configure Email Settings (Optional)
 
 For production, you'll want to configure custom email templates:
 
@@ -77,14 +44,16 @@ For production, you'll want to configure custom email templates:
 
 For development, the default templates work fine!
 
-## Step 5: Get Your Project Credentials
+**Note**: Email/password authentication is enabled by default in Supabase. No additional configuration needed!
+
+## Step 4: Get Your Project Credentials
 
 1. Go to **Settings** → **API** in your Supabase dashboard
 2. You'll need two values:
    - **Project URL** (looks like: `https://xxxxx.supabase.co`)
    - **anon public** key (under "Project API keys")
 
-## Step 6: Configure Your App
+## Step 5: Configure Your App
 
 1. Copy the `.env.example` file to `.env`:
    ```bash
@@ -103,7 +72,7 @@ For development, the default templates work fine!
    .env.local
    ```
 
-## Step 7: Run the App
+## Step 6: Run the App
 
 1. Install dependencies (if not already done):
    ```bash
@@ -117,7 +86,7 @@ For development, the default templates work fine!
 
 3. Open the app in your browser
 4. Click "Sign In / Sign Up" in the settings panel
-5. Create an account or sign in with SSO!
+5. Create an account with your email and password!
 
 ## How It Works
 
@@ -149,15 +118,10 @@ If you don't sign in:
 
 ## Troubleshooting
 
-### "Invalid OAuth token" error
+### "Invalid API key" or connection errors
 - Make sure your `.env` file has the correct credentials
 - Restart your dev server after changing `.env`
 - Check that you copied the **anon** key, not the service_role key
-
-### OAuth redirect not working
-- Double-check the redirect URI in your OAuth provider settings
-- Make sure it matches: `https://<your-project-ref>.supabase.co/auth/v1/callback`
-- Replace `<your-project-ref>` with your actual project reference
 
 ### Data not syncing
 - Check browser console for errors
@@ -178,15 +142,11 @@ Before deploying to production:
    - Add your production domain to **Site URL**
    - Add your production domain to **Redirect URLs**
 
-2. **Update OAuth providers**:
-   - Add production redirect URIs to Google/GitHub OAuth apps
-   - Use format: `https://your-domain.com/auth/callback` (handled by Supabase)
-
-3. **Configure environment variables** in your hosting platform:
+2. **Configure environment variables** in your hosting platform:
    - Add `VITE_SUPABASE_URL`
    - Add `VITE_SUPABASE_ANON_KEY`
 
-4. **Enable email confirmations** (optional):
+3. **Enable email confirmations** (optional):
    - Go to **Authentication** → **Providers** → **Email**
    - Toggle "Confirm email"
 
@@ -211,8 +171,8 @@ If you run into issues:
 
 Now that auth is set up, you can:
 - Customize the auth UI in `src/Auth.tsx`
-- Add more OAuth providers (Apple, Azure, etc.)
 - Implement user profiles or avatars
+- Add password reset functionality
 - Add social features (leaderboards, shared quizzes, etc.)
 
 Enjoy your cloud-synced quiz app! 🎉

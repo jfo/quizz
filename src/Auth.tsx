@@ -42,42 +42,6 @@ export function Auth({ onClose }: AuthProps) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-      setLoading(false);
-    }
-  };
-
-  const handleGitHubSignIn = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-      setLoading(false);
-    }
-  };
-
   return (
     <div style={{
       position: 'fixed',
@@ -147,55 +111,6 @@ export function Auth({ onClose }: AuthProps) {
             {message}
           </div>
         )}
-
-        <div style={{ marginBottom: '1.5rem' }}>
-          <button
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              marginBottom: '0.5rem',
-              backgroundColor: 'white',
-              color: '#333',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 500,
-            }}
-          >
-            Continue with Google
-          </button>
-          <button
-            onClick={handleGitHubSignIn}
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: '#333',
-              color: 'white',
-              border: '1px solid #444',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 500,
-            }}
-          >
-            Continue with GitHub
-          </button>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          margin: '1.5rem 0',
-          color: 'var(--color-text-secondary)',
-        }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-border)' }} />
-          <span style={{ padding: '0 1rem' }}>or</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-border)' }} />
-        </div>
 
         <form onSubmit={handleEmailAuth}>
           <div style={{ marginBottom: '1rem' }}>
