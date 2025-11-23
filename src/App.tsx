@@ -90,6 +90,7 @@ function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state changed in App:', _event, session?.user?.email || 'no user');
       const newUser = session?.user ?? null
       setUser(newUser)
       setCurrentUser(newUser)
