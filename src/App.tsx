@@ -154,7 +154,13 @@ function App() {
       }
     })
 
-    return () => subscription.unsubscribe()
+    // Store subscription reference globally so UserProfile can access it
+    (window as any).__authSubscription = subscription
+
+    return () => {
+      subscription.unsubscribe()
+      delete (window as any).__authSubscription
+    }
   }, []) // Run only once on mount
 
   // Sync preferences to cloud when they change (if user is logged in)

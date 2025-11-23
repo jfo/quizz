@@ -12,6 +12,14 @@ export function UserProfile({ user }: UserProfileProps) {
   const handleSignOut = async () => {
     console.log('Sign out button clicked');
     setSigningOut(true);
+
+    // Temporarily unsubscribe from auth listener to prevent blocking
+    const subscription = (window as any).__authSubscription;
+    if (subscription) {
+      console.log('Unsubscribing from auth listener before sign out');
+      subscription.unsubscribe();
+    }
+
     try {
       console.log('Calling supabase.auth.signOut()');
       const { error } = await supabase.auth.signOut();
@@ -21,11 +29,15 @@ export function UserProfile({ user }: UserProfileProps) {
         console.error('Sign out error:', error);
         alert('Failed to sign out: ' + error.message);
       } else {
-        console.log('Sign out successful');
+        console.log('Sign out successful - reloading page');
+        // Reload page to reset all state and resubscribe to auth
+        window.location.reload();
       }
     } catch (err) {
       console.error('Sign out exception:', err);
       alert('Failed to sign out');
+      // Reload page to ensure clean state
+      window.location.reload();
     } finally {
       console.log('Sign out finally block');
       setSigningOut(false);
