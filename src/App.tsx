@@ -27,6 +27,7 @@ function App() {
   const [shuffledOptions, setShuffledOptions] = useState<QuestionOption[]>([])
   const [shuffleMode, setShuffleMode] = useState(false)
   const [mostNeededMode, setMostNeededMode] = useState(false)
+  const [newQuestionsOnly, setNewQuestionsOnly] = useState(false)
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
   const [isInitializing, setIsInitializing] = useState(true)
   const [showChapters, setShowChapters] = useState(true)
@@ -212,7 +213,7 @@ function App() {
 
       const sections = selectedSections.length > 0 ? selectedSections : undefined
       const quizzes = selectedQuizzes.length > 0 ? selectedQuizzes : undefined
-      const nextQuestion = await getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode, ratingFilter || undefined)
+      const nextQuestion = await getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode, ratingFilter || undefined, newQuestionsOnly)
       setQuestion(nextQuestion)
       setShuffledOptions(shuffleArray(nextQuestion.options))
       setSelectedOption(null)
@@ -319,6 +320,11 @@ function App() {
       const savedMostNeededMode = localStorage.getItem('mostNeededMode')
       if (savedMostNeededMode) {
         setMostNeededMode(savedMostNeededMode === 'true')
+      }
+
+      const savedNewQuestionsOnly = localStorage.getItem('newQuestionsOnly')
+      if (savedNewQuestionsOnly) {
+        setNewQuestionsOnly(savedNewQuestionsOnly === 'true')
       }
 
       const savedRatingFilter = localStorage.getItem('ratingFilter')
@@ -508,6 +514,15 @@ function App() {
         setShuffleMode(false)
         localStorage.setItem('shuffleMode', 'false')
       }
+      return newValue
+    })
+  }
+
+  const toggleNewQuestionsOnly = () => {
+    playFeedback('toggle')
+    setNewQuestionsOnly(prev => {
+      const newValue = !prev
+      localStorage.setItem('newQuestionsOnly', String(newValue))
       return newValue
     })
   }
@@ -1379,12 +1394,22 @@ function App() {
             />
             <span>Shuffle questions</span>
           </label>
+          <label className="checkbox-item" style={{ marginTop: '8px' }}>
+            <input
+              type="checkbox"
+              checked={newQuestionsOnly}
+              onChange={toggleNewQuestionsOnly}
+            />
+            <span>New questions only (not yet answered)</span>
+          </label>
           <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-placeholder)', marginTop: '8px', paddingLeft: '38px' }}>
             {mostNeededMode
               ? 'Questions ordered by knowledge level and performance'
               : shuffleMode
                 ? 'Questions in random order'
-                : 'Questions in sequential order'}
+                : newQuestionsOnly
+                  ? 'Only showing questions you haven\'t answered yet'
+                  : 'Questions in sequential order'}
           </div>
         </div>
 
