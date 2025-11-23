@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import type { User } from '@supabase/supabase-js';
 import type { QuestionStates, QuestionState } from './questionState';
 import type { AnswerAttempt } from './metrics';
@@ -18,7 +18,7 @@ export function setCurrentUser(user: User | null) {
 // =====================
 
 export async function syncQuestionStates(localStates: QuestionStates): Promise<QuestionStates> {
-  if (!currentUser || syncInProgress) return localStates;
+  if (!isSupabaseConfigured || !currentUser || syncInProgress) return localStates;
 
   syncInProgress = true;
   try {
@@ -65,7 +65,7 @@ export async function syncQuestionStates(localStates: QuestionStates): Promise<Q
 }
 
 export async function saveQuestionStateToCloud(questionId: string, state: QuestionState): Promise<void> {
-  if (!currentUser) return;
+  if (!isSupabaseConfigured || !currentUser) return;
 
   try {
     const { error } = await supabase
@@ -92,7 +92,7 @@ export async function saveQuestionStateToCloud(questionId: string, state: Questi
 // ============
 
 export async function syncMetrics(localMetrics: AnswerAttempt[]): Promise<AnswerAttempt[]> {
-  if (!currentUser || syncInProgress) return localMetrics;
+  if (!isSupabaseConfigured || !currentUser || syncInProgress) return localMetrics;
 
   syncInProgress = true;
   try {
@@ -141,7 +141,7 @@ export async function syncMetrics(localMetrics: AnswerAttempt[]): Promise<Answer
 }
 
 export async function saveMetricToCloud(attempt: AnswerAttempt): Promise<void> {
-  if (!currentUser) return;
+  if (!isSupabaseConfigured || !currentUser) return;
 
   try {
     const { error } = await supabase
@@ -178,7 +178,7 @@ export interface UserPreferences {
 }
 
 export async function syncUserPreferences(localPrefs: UserPreferences): Promise<UserPreferences> {
-  if (!currentUser || syncInProgress) return localPrefs;
+  if (!isSupabaseConfigured || !currentUser || syncInProgress) return localPrefs;
 
   syncInProgress = true;
   try {
@@ -206,7 +206,7 @@ export async function syncUserPreferences(localPrefs: UserPreferences): Promise<
 }
 
 export async function saveUserPreferencesToCloud(preferences: UserPreferences): Promise<void> {
-  if (!currentUser) return;
+  if (!isSupabaseConfigured || !currentUser) return;
 
   try {
     const { error } = await supabase
@@ -233,7 +233,7 @@ export async function migrateLocalDataToCloud(
   localMetrics: AnswerAttempt[],
   localPrefs: UserPreferences
 ): Promise<void> {
-  if (!currentUser) return;
+  if (!isSupabaseConfigured || !currentUser) return;
 
   console.log('Migrating local data to cloud...');
 

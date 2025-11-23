@@ -4,7 +4,7 @@ import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportSta
 import { playFeedback, isSoundEnabled, isHapticEnabled, setSoundEnabled, setHapticEnabled, isHapticSupported } from './feedback'
 import { recordAnswer, loadMetrics } from './metrics'
 import { MetricsView } from './MetricsView'
-import { supabase } from './supabase'
+import { supabase, isSupabaseConfigured } from './supabase'
 import { Auth } from './Auth'
 import { UserProfile } from './UserProfile'
 import { setCurrentUser, syncQuestionStates, syncMetrics, syncUserPreferences, migrateLocalDataToCloud, saveUserPreferencesToCloud, type UserPreferences } from './syncService'
@@ -80,6 +80,12 @@ function App() {
 
   // Auth state management and sync
   useEffect(() => {
+    // Skip auth setup if Supabase is not configured
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - auth disabled');
+      return;
+    }
+
     console.log('Setting up auth listener');
 
     // Get initial session
@@ -165,7 +171,7 @@ function App() {
 
   // Sync preferences to cloud when they change (if user is logged in)
   useEffect(() => {
-    if (user) {
+    if (isSupabaseConfigured && user) {
       const prefs: UserPreferences = {
         selectedSections,
         selectedQuizzes,
@@ -988,39 +994,41 @@ function App() {
         )}
       </div>
       <div id="settings-content" className={`settings-content ${settingsCollapsed ? 'collapsed' : ''}`}>
-        {/* Auth Section */}
-        <div className="settings-section" style={{ marginBottom: '1rem' }}>
-          {user ? (
-            <UserProfile user={user} />
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: 'var(--color-primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: 500,
-              }}
-            >
-              Sign In / Sign Up
-            </button>
-          )}
-          {syncStatus === 'syncing' && (
-            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
-              Syncing...
-            </div>
-          )}
-          {syncStatus === 'synced' && (
-            <div style={{ fontSize: '0.8rem', color: '#44aa44', marginTop: '0.5rem', textAlign: 'center' }}>
-              Synced!
-            </div>
-          )}
-        </div>
+        {/* Auth Section - only show if Supabase is configured */}
+        {isSupabaseConfigured && (
+          <div className="settings-section" style={{ marginBottom: '1rem' }}>
+            {user ? (
+              <UserProfile user={user} />
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                }}
+              >
+                Sign In / Sign Up
+              </button>
+            )}
+            {syncStatus === 'syncing' && (
+              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
+                Syncing...
+              </div>
+            )}
+            {syncStatus === 'synced' && (
+              <div style={{ fontSize: '0.8rem', color: '#44aa44', marginTop: '0.5rem', textAlign: 'center' }}>
+                Synced!
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="settings-section">
           <div className="settings-section-header">
