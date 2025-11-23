@@ -107,7 +107,7 @@ export function Auth({ onClose }: AuthProps) {
           alignItems: 'center',
           marginBottom: '1.5rem',
         }}>
-          <h2 style={{ margin: 0 }}>
+          <h2 style={{ margin: 0, color: 'var(--color-text)' }}>
             {isSignUp ? 'Sign Up' : 'Sign In'}
           </h2>
           <button
@@ -199,7 +199,7 @@ export function Auth({ onClose }: AuthProps) {
 
         <form onSubmit={handleEmailAuth}>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text)' }}>
               Email
             </label>
             <input
@@ -220,7 +220,7 @@ export function Auth({ onClose }: AuthProps) {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text)' }}>
               Password
             </label>
             <input
