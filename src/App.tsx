@@ -236,7 +236,9 @@ function App() {
     try {
       if (selectedQuizzes.length === 0) {
         setStats(null)
-        setRatingLevelCounts({})
+        // Don't clear ratingLevelCounts - keep displaying last valid data
+        // to avoid race condition during initialization where selectedQuizzes
+        // might be temporarily empty while loading from localStorage
         return
       }
 
