@@ -93,60 +93,64 @@ function App() {
     console.log('Registering onAuthStateChange listener');
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed in App:', _event, session?.user?.email || 'no user');
       const newUser = session?.user ?? null
       setUser(newUser)
       setCurrentUser(newUser)
 
-      // Sync when user signs in
+      // Sync when user signs in (fire-and-forget to avoid blocking signOut)
       if (newUser && _event === 'SIGNED_IN') {
         setSyncStatus('syncing')
-        try {
-          // Gather local data
-          const localStates = loadQuestionStates()
-          const localMetrics = loadMetrics()
-          const localPrefs: UserPreferences = {
-            selectedSections,
-            selectedQuizzes,
-            shuffleMode,
-            mostNeededMode,
-            ratingFilter: ratingFilter || undefined,
-            darkMode,
-            settingsCollapsed,
-            soundEnabled,
-            hapticEnabled,
+
+        // Run sync asynchronously without blocking the auth callback
+        ;(async () => {
+          try {
+            // Gather local data
+            const localStates = loadQuestionStates()
+            const localMetrics = loadMetrics()
+            const localPrefs: UserPreferences = {
+              selectedSections,
+              selectedQuizzes,
+              shuffleMode,
+              mostNeededMode,
+              ratingFilter: ratingFilter || undefined,
+              darkMode,
+              settingsCollapsed,
+              soundEnabled,
+              hapticEnabled,
+            }
+
+            // Migrate local data to cloud (only on first sign-in)
+            await migrateLocalDataToCloud(localStates, localMetrics, localPrefs)
+
+            // Sync and merge with cloud data
+            const syncedStates = await syncQuestionStates(localStates)
+            const syncedMetrics = await syncMetrics(localMetrics)
+            const syncedPrefs = await syncUserPreferences(localPrefs)
+
+            // Update local storage with merged data
+            saveQuestionStates(syncedStates)
+            localStorage.setItem('quizMetrics', JSON.stringify(syncedMetrics))
+
+            // Apply synced preferences
+            if (syncedPrefs.selectedSections) setSelectedSections(syncedPrefs.selectedSections)
+            if (syncedPrefs.selectedQuizzes) setSelectedQuizzes(syncedPrefs.selectedQuizzes)
+            if (syncedPrefs.shuffleMode !== undefined) setShuffleMode(syncedPrefs.shuffleMode)
+            if (syncedPrefs.mostNeededMode !== undefined) setMostNeededMode(syncedPrefs.mostNeededMode)
+            if (syncedPrefs.ratingFilter) setRatingFilter(syncedPrefs.ratingFilter)
+            if (syncedPrefs.darkMode !== undefined) setDarkMode(syncedPrefs.darkMode)
+            if (syncedPrefs.settingsCollapsed !== undefined) setSettingsCollapsed(syncedPrefs.settingsCollapsed)
+            if (syncedPrefs.soundEnabled !== undefined) setSoundEnabledState(syncedPrefs.soundEnabled)
+            if (syncedPrefs.hapticEnabled !== undefined) setHapticEnabledState(syncedPrefs.hapticEnabled)
+
+            setSyncStatus('synced')
+            setTimeout(() => setSyncStatus('idle'), 2000)
+          } catch (error) {
+            console.error('Sync failed:', error)
+            setSyncStatus('idle')
           }
-
-          // Migrate local data to cloud (only on first sign-in)
-          await migrateLocalDataToCloud(localStates, localMetrics, localPrefs)
-
-          // Sync and merge with cloud data
-          const syncedStates = await syncQuestionStates(localStates)
-          const syncedMetrics = await syncMetrics(localMetrics)
-          const syncedPrefs = await syncUserPreferences(localPrefs)
-
-          // Update local storage with merged data
-          saveQuestionStates(syncedStates)
-          localStorage.setItem('quizMetrics', JSON.stringify(syncedMetrics))
-
-          // Apply synced preferences
-          if (syncedPrefs.selectedSections) setSelectedSections(syncedPrefs.selectedSections)
-          if (syncedPrefs.selectedQuizzes) setSelectedQuizzes(syncedPrefs.selectedQuizzes)
-          if (syncedPrefs.shuffleMode !== undefined) setShuffleMode(syncedPrefs.shuffleMode)
-          if (syncedPrefs.mostNeededMode !== undefined) setMostNeededMode(syncedPrefs.mostNeededMode)
-          if (syncedPrefs.ratingFilter) setRatingFilter(syncedPrefs.ratingFilter)
-          if (syncedPrefs.darkMode !== undefined) setDarkMode(syncedPrefs.darkMode)
-          if (syncedPrefs.settingsCollapsed !== undefined) setSettingsCollapsed(syncedPrefs.settingsCollapsed)
-          if (syncedPrefs.soundEnabled !== undefined) setSoundEnabledState(syncedPrefs.soundEnabled)
-          if (syncedPrefs.hapticEnabled !== undefined) setHapticEnabledState(syncedPrefs.hapticEnabled)
-
-          setSyncStatus('synced')
-          setTimeout(() => setSyncStatus('idle'), 2000)
-        } catch (error) {
-          console.error('Sync failed:', error)
-          setSyncStatus('idle')
-        }
+        })()
       }
     })
 
