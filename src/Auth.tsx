@@ -92,7 +92,7 @@ export function Auth({ onClose }: AuthProps) {
       zIndex: 1000,
     }}>
       <div style={{
-        backgroundColor: 'var(--color-bg)',
+        backgroundColor: 'var(--color-bg-card)',
         color: 'var(--color-text-primary)',
         padding: '2rem',
         borderRadius: '8px',
@@ -213,7 +213,7 @@ export function Auth({ onClose }: AuthProps) {
                 fontSize: '1rem',
                 borderRadius: '4px',
                 border: '1px solid var(--color-border)',
-                backgroundColor: 'var(--color-bg)',
+                backgroundColor: 'var(--color-bg-input)',
                 color: 'var(--color-text-primary)',
               }}
             />
@@ -235,7 +235,7 @@ export function Auth({ onClose }: AuthProps) {
                 fontSize: '1rem',
                 borderRadius: '4px',
                 border: '1px solid var(--color-border)',
-                backgroundColor: 'var(--color-bg)',
+                backgroundColor: 'var(--color-bg-input)',
                 color: 'var(--color-text-primary)',
               }}
             />
