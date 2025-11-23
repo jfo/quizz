@@ -194,7 +194,7 @@ describe('questionState', () => {
   })
 
   describe('exportState and importState', () => {
-    it('should export state as JSON string', () => {
+    it('should export state as JSON string with version and structure', () => {
       const states: QuestionStates = {
         'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
         'q2': { rating: 5, correctStreak: 0, incorrectCount: 3, lastAnswered: 2000 },
@@ -204,14 +204,38 @@ describe('questionState', () => {
       const exported = exportState()
       const parsed = JSON.parse(exported)
 
-      expect(parsed).toEqual(states)
+      // Check new format structure
+      expect(parsed.version).toBe(1)
+      expect(parsed.exportDate).toBeDefined()
+      expect(parsed.questionRatings).toEqual(states)
+      expect(parsed.metrics).toBeDefined()
     })
 
-    it('should import valid state from JSON string', () => {
+    it('should import valid state from JSON string (old format)', () => {
       const states: QuestionStates = {
         'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
       }
       const json = JSON.stringify(states)
+
+      const success = importState(json)
+      expect(success).toBe(true)
+
+      const loaded = loadQuestionStates()
+      expect(loaded).toEqual(states)
+    })
+
+    it('should import valid state from new format', () => {
+      const states: QuestionStates = {
+        'q1': { rating: 3, correctStreak: 2, incorrectCount: 1, lastAnswered: 1000 },
+        'q2': { rating: 5, correctStreak: 0, incorrectCount: 3, lastAnswered: 2000 },
+      }
+      const newFormat = {
+        version: 1,
+        exportDate: new Date().toISOString(),
+        questionRatings: states,
+        metrics: []
+      }
+      const json = JSON.stringify(newFormat)
 
       const success = importState(json)
       expect(success).toBe(true)

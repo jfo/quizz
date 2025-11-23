@@ -108,20 +108,54 @@ export function calculateNeedScore(state: QuestionState): number {
 // Export state as JSON for download
 export function exportState(): string {
   const states = loadQuestionStates();
-  return JSON.stringify(states, null, 2);
+
+  // Import metrics for complete backup
+  let metrics: any[] = [];
+  try {
+    const metricsData = localStorage.getItem('quizMetrics');
+    if (metricsData) {
+      metrics = JSON.parse(metricsData);
+    }
+  } catch (error) {
+    console.error('Failed to load metrics for export:', error);
+  }
+
+  // Create a comprehensive export with question ratings as primary data
+  const exportData = {
+    version: 1,
+    exportDate: new Date().toISOString(),
+    questionRatings: states,  // Primary data - question ratings/states
+    metrics: metrics,         // Secondary data - historical analytics
+  };
+
+  return JSON.stringify(exportData, null, 2);
 }
 
 // Import state from JSON
 export function importState(jsonString: string): boolean {
   try {
-    const states = JSON.parse(jsonString);
+    const data = JSON.parse(jsonString);
+
     // Validate structure
-    if (typeof states !== 'object') {
+    if (typeof data !== 'object') {
       throw new Error('Invalid state format');
     }
 
-    // Basic validation
-    for (const [key, value] of Object.entries(states)) {
+    let questionStates: QuestionStates;
+    let metricsData: any[] | null = null;
+
+    // Check if this is the new comprehensive format or old format
+    if (data.version && data.questionRatings) {
+      // New format with version and structured data
+      questionStates = data.questionRatings;
+      metricsData = data.metrics || null;
+    } else {
+      // Old format - just question states
+      questionStates = data;
+    }
+
+    // Validate question states structure
+    for (const [key, value] of Object.entries(questionStates)) {
       const state = value as any;
       if (typeof state.rating !== 'number' ||
           typeof state.correctStreak !== 'number' ||
@@ -131,7 +165,19 @@ export function importState(jsonString: string): boolean {
       }
     }
 
-    saveQuestionStates(states as QuestionStates);
+    // Save question states (primary data)
+    saveQuestionStates(questionStates);
+
+    // If metrics are included, restore them too
+    if (metricsData && Array.isArray(metricsData)) {
+      try {
+        localStorage.setItem('quizMetrics', JSON.stringify(metricsData));
+      } catch (error) {
+        console.error('Failed to restore metrics:', error);
+        // Don't fail the entire import if metrics fail
+      }
+    }
+
     return true;
   } catch (err) {
     console.error('Failed to import state:', err);
