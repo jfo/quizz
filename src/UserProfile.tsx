@@ -14,7 +14,15 @@ export function UserProfile({ user }: UserProfileProps) {
     setSigningOut(true);
     try {
       console.log('Calling supabase.auth.signOut()');
-      const { error } = await supabase.auth.signOut();
+
+      // Add timeout to prevent hanging
+      const signOutPromise = supabase.auth.signOut({ scope: 'local' });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Sign out timeout')), 5000)
+      );
+
+      const { error } = await Promise.race([signOutPromise, timeoutPromise]) as any;
+
       console.log('Sign out response:', { error });
       if (error) {
         console.error('Sign out error:', error);
@@ -22,9 +30,15 @@ export function UserProfile({ user }: UserProfileProps) {
       } else {
         console.log('Sign out successful');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Sign out exception:', err);
-      alert('Failed to sign out');
+      // Even if it times out, the user is likely signed out
+      if (err.message === 'Sign out timeout') {
+        console.log('Sign out timed out, reloading page...');
+        window.location.reload();
+      } else {
+        alert('Failed to sign out');
+      }
     } finally {
       console.log('Sign out finally block');
       setSigningOut(false);
