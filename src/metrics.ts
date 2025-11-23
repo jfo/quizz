@@ -1,7 +1,9 @@
 /**
  * Metrics tracking system for quiz answers
- * Stores historical correct/incorrect answers in localStorage
+ * Stores historical correct/incorrect answers in localStorage and cloud
  */
+
+import { saveMetricToCloud } from './syncService';
 
 export interface AnswerAttempt {
   questionId: string;
@@ -109,6 +111,11 @@ export function recordAnswer(
   }
 
   saveMetrics(attempts);
+
+  // Save to cloud (async, fire-and-forget)
+  saveMetricToCloud(newAttempt).catch(err => {
+    console.error('Failed to sync metric to cloud:', err);
+  });
 }
 
 /**

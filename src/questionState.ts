@@ -1,4 +1,6 @@
-// Question state management with localStorage persistence
+// Question state management with localStorage persistence and cloud sync
+
+import { saveQuestionStateToCloud } from './syncService';
 
 export interface QuestionState {
   rating: number; // 0 = unrated/unknown, higher = better knowledge (increments on correct, decrements on incorrect)
@@ -53,6 +55,12 @@ export function updateQuestionState(questionId: string, updates: Partial<Questio
   const updated = { ...current, ...updates, lastAnswered: Date.now() };
   states[questionId] = updated;
   saveQuestionStates(states);
+
+  // Save to cloud (async, fire-and-forget)
+  saveQuestionStateToCloud(questionId, updated).catch(err => {
+    console.error('Failed to sync question state to cloud:', err);
+  });
+
   return updated;
 }
 
