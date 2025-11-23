@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 
 interface AuthProps {
@@ -13,6 +13,30 @@ export function Auth({ onClose }: AuthProps) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  // Check if user is already signed in when modal opens
+  // and listen for auth state changes
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log('User already signed in, closing modal');
+        onClose();
+      }
+    });
+
+    // Listen for auth changes and close modal when signed in
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed in modal:', event, session?.user?.email);
+      if (event === 'SIGNED_IN' && session) {
+        console.log('User signed in, closing modal');
+        onClose();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [onClose]);
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -21,21 +45,32 @@ export function Auth({ onClose }: AuthProps) {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
-        setMessage('Check your email for the confirmation link!');
+
+        // Check if email confirmation is disabled (auto-confirm)
+        if (data.user && data.session) {
+          // User is immediately signed in
+          onClose();
+        } else {
+          // Email confirmation required
+          setMessage('Check your email for the confirmation link!');
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+
+        console.log('Sign in successful:', data);
         onClose();
       }
     } catch (err: any) {
+      console.error('Auth error:', err);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
