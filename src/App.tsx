@@ -97,9 +97,7 @@ function App() {
 
     // Listen for auth changes
     console.log('Registering onAuthStateChange listener');
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const x = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed in App:', _event, session?.user?.email || 'no user');
       const newUser = session?.user ?? null
       setUser(newUser)
@@ -158,7 +156,10 @@ function App() {
           }
         })()
       }
-    })
+    });
+
+    const { data: { subscription } } = x;
+
 
     // Store subscription reference globally so UserProfile can access it
     (window as any).__authSubscription = subscription
