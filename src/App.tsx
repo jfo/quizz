@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Question, QuestionOption, Stats, QuizzesBySection, getNextQuestion, submitAnswer, getStats, getSections, getQuizzes, initializeQuestionManager, getAllQuestionsForStats } from './api'
-import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState, loadQuestionStates } from './questionState'
+import { getQuestionState, setQuestionRating, updateRatingAfterAnswer, exportState, importState, clearAllState, loadQuestionStates, saveQuestionStates } from './questionState'
 import { playFeedback, isSoundEnabled, isHapticEnabled, setSoundEnabled, setHapticEnabled, isHapticSupported } from './feedback'
-import { recordAnswer } from './metrics'
+import { recordAnswer, loadMetrics } from './metrics'
 import { MetricsView } from './MetricsView'
+import { supabase, isSupabaseConfigured } from './supabase'
+import { Auth } from './Auth'
+import { UserProfile } from './UserProfile'
+import { setCurrentUser, syncQuestionStates, syncMetrics, syncUserPreferences, migrateLocalDataToCloud, saveUserPreferencesToCloud, type UserPreferences } from './syncService'
+import type { User } from '@supabase/supabase-js'
 
 function App() {
   const [question, setQuestion] = useState<Question | null>(null)
@@ -43,6 +48,11 @@ function App() {
   const [ratingLevelCounts, setRatingLevelCounts] = useState<{ [level: number]: number }>({})
   const [showMetrics, setShowMetrics] = useState(false)
 
+  // Auth states
+  const [user, setUser] = useState<User | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle')
+
   // Test mode states
   const [testMode, setTestMode] = useState(false)
   const [testQuestions, setTestQuestions] = useState<Question[]>([])
@@ -67,6 +77,118 @@ function App() {
   useEffect(() => {
     localStorage.setItem('settingsCollapsed', String(settingsCollapsed))
   }, [settingsCollapsed])
+
+  // Auth state management and sync
+  useEffect(() => {
+    // Skip auth setup if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      console.log('Supabase not configured - auth disabled');
+      return;
+    }
+
+    console.log('Setting up auth listener');
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email || 'no user');
+      setUser(session?.user ?? null)
+      setCurrentUser(session?.user ?? null)
+    })
+
+    // Listen for auth changes
+    console.log('Registering onAuthStateChange listener');
+    const x = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed in App:', _event, session?.user?.email || 'no user');
+      const newUser = session?.user ?? null
+      setUser(newUser)
+      setCurrentUser(newUser)
+
+      // Sync when user signs in (fire-and-forget to avoid blocking signOut)
+      if (newUser && _event === 'SIGNED_IN') {
+        setSyncStatus('syncing')
+
+        // Run sync asynchronously without blocking the auth callback
+        ;(async () => {
+          try {
+            // Gather local data
+            const localStates = loadQuestionStates()
+            const localMetrics = loadMetrics()
+            const localPrefs: UserPreferences = {
+              selectedSections,
+              selectedQuizzes,
+              shuffleMode,
+              mostNeededMode,
+              ratingFilter: ratingFilter || undefined,
+              darkMode,
+              settingsCollapsed,
+              soundEnabled,
+              hapticEnabled,
+            }
+
+            // Migrate local data to cloud (only on first sign-in)
+            await migrateLocalDataToCloud(localStates, localMetrics, localPrefs)
+
+            // Sync and merge with cloud data
+            const syncedStates = await syncQuestionStates(localStates)
+            const syncedMetrics = await syncMetrics(localMetrics)
+            const syncedPrefs = await syncUserPreferences(localPrefs)
+
+            // Update local storage with merged data
+            saveQuestionStates(syncedStates)
+            localStorage.setItem('quizMetrics', JSON.stringify(syncedMetrics))
+
+            // Apply synced preferences
+            if (syncedPrefs.selectedSections) setSelectedSections(syncedPrefs.selectedSections)
+            if (syncedPrefs.selectedQuizzes) setSelectedQuizzes(syncedPrefs.selectedQuizzes)
+            if (syncedPrefs.shuffleMode !== undefined) setShuffleMode(syncedPrefs.shuffleMode)
+            if (syncedPrefs.mostNeededMode !== undefined) setMostNeededMode(syncedPrefs.mostNeededMode)
+            if (syncedPrefs.ratingFilter) setRatingFilter(syncedPrefs.ratingFilter)
+            if (syncedPrefs.darkMode !== undefined) setDarkMode(syncedPrefs.darkMode)
+            if (syncedPrefs.settingsCollapsed !== undefined) setSettingsCollapsed(syncedPrefs.settingsCollapsed)
+            if (syncedPrefs.soundEnabled !== undefined) setSoundEnabledState(syncedPrefs.soundEnabled)
+            if (syncedPrefs.hapticEnabled !== undefined) setHapticEnabledState(syncedPrefs.hapticEnabled)
+
+            setSyncStatus('synced')
+            setTimeout(() => setSyncStatus('idle'), 2000)
+          } catch (error) {
+            console.error('Sync failed:', error)
+            setSyncStatus('idle')
+          }
+        })()
+      }
+    });
+
+    const { data: { subscription } } = x;
+
+
+    // Store subscription reference globally so UserProfile can access it
+    (window as any).__authSubscription = subscription
+
+    return () => {
+      subscription.unsubscribe()
+      delete (window as any).__authSubscription
+    }
+  }, []) // Run only once on mount
+
+  // Sync preferences to cloud when they change (if user is logged in)
+  useEffect(() => {
+    if (isSupabaseConfigured && user) {
+      const prefs: UserPreferences = {
+        selectedSections,
+        selectedQuizzes,
+        shuffleMode,
+        mostNeededMode,
+        ratingFilter: ratingFilter || undefined,
+        darkMode,
+        settingsCollapsed,
+        soundEnabled,
+        hapticEnabled,
+      }
+      saveUserPreferencesToCloud(prefs).catch(err => {
+        console.error('Failed to sync preferences:', err)
+      })
+    }
+  }, [selectedSections, selectedQuizzes, shuffleMode, mostNeededMode, ratingFilter, darkMode, settingsCollapsed, soundEnabled, hapticEnabled, user])
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     const newArray = [...array]
@@ -873,6 +995,42 @@ function App() {
         )}
       </div>
       <div id="settings-content" className={`settings-content ${settingsCollapsed ? 'collapsed' : ''}`}>
+        {/* Auth Section - only show if Supabase is configured */}
+        {isSupabaseConfigured && (
+          <div className="settings-section" style={{ marginBottom: '1rem' }}>
+            {user ? (
+              <UserProfile user={user} />
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                }}
+              >
+                Sign In / Sign Up
+              </button>
+            )}
+            {syncStatus === 'syncing' && (
+              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
+                Syncing...
+              </div>
+            )}
+            {syncStatus === 'synced' && (
+              <div style={{ fontSize: '0.8rem', color: '#44aa44', marginTop: '0.5rem', textAlign: 'center' }}>
+                Synced!
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="settings-section">
           <div className="settings-section-header">
             <h3>Quizzes ({selectedQuizzes.length}/{quizzesBySection.flatMap(s => s.quizzes).length})</h3>
@@ -1891,6 +2049,11 @@ function App() {
             <MetricsView onClose={() => setShowMetrics(false)} />
           </div>
         </div>
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <Auth onClose={() => setShowAuthModal(false)} />
       )}
     </>
   )
