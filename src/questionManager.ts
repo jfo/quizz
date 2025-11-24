@@ -20,7 +20,7 @@ interface Section {
 export interface IQuestionManager {
   getSections(): Promise<string[]>;
   getQuizzes(): Promise<QuizzesBySection[]>;
-  getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question>;
+  getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number], newQuestionsOnly?: boolean): Promise<Question>;
   submitAnswer(questionId: string, isCorrect: boolean, selectedOption: string, responseTimeMs?: number): Promise<AnswerResponse>;
   getStats(sections?: string[], quizzes?: string[], timeframeDays?: number, ratingRange?: [number, number]): Promise<Stats>;
   getAllQuestionsForStats(sections?: string[], quizzes?: string[]): Promise<Question[]>;
@@ -82,8 +82,16 @@ export class LocalQuestionManager implements IQuestionManager {
     return allQuestions;
   }
 
-  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question> {
+  async getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number], newQuestionsOnly?: boolean): Promise<Question> {
     let allQuestions = this.getAllQuestions(sections, quizzes);
+
+    // Filter by new questions only if specified
+    if (newQuestionsOnly) {
+      allQuestions = allQuestions.filter(q => {
+        // Filter for questions marked as "Potential new question" in metadata
+        return q.metadata && q.metadata.toLowerCase().includes('potential new question');
+      });
+    }
 
     // Filter by rating range if specified
     if (ratingRange) {

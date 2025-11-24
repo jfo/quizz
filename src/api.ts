@@ -75,8 +75,8 @@ function getManager(): IQuestionManager {
 }
 
 // API functions that delegate to the question manager
-export async function getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number]): Promise<Question> {
-  return getManager().getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode, ratingRange);
+export async function getNextQuestion(sections?: string[], quizzes?: string[], shuffleMode?: boolean, mostNeededMode?: boolean, ratingRange?: [number, number], newQuestionsOnly?: boolean): Promise<Question> {
+  return getManager().getNextQuestion(sections, quizzes, shuffleMode, mostNeededMode, ratingRange, newQuestionsOnly);
 }
 
 export async function getSections(): Promise<string[]> {
