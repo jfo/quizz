@@ -1400,7 +1400,7 @@ function App() {
               checked={newQuestionsOnly}
               onChange={toggleNewQuestionsOnly}
             />
-            <span>New questions only (not yet answered)</span>
+            <span>Potential new questions only</span>
           </label>
           <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-placeholder)', marginTop: '8px', paddingLeft: '38px' }}>
             {mostNeededMode
@@ -1408,7 +1408,7 @@ function App() {
               : shuffleMode
                 ? 'Questions in random order'
                 : newQuestionsOnly
-                  ? 'Only showing questions you haven\'t answered yet'
+                  ? 'Only showing questions marked as "Potential new question"'
                   : 'Questions in sequential order'}
           </div>
         </div>
