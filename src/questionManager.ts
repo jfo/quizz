@@ -87,9 +87,11 @@ export class LocalQuestionManager implements IQuestionManager {
 
     // Filter by new questions only if specified
     if (newQuestionsOnly) {
+      const states = loadQuestionStates();
       allQuestions = allQuestions.filter(q => {
-        // Filter for questions marked as "Potential new question" in metadata
-        return q.metadata && q.metadata.toLowerCase().includes('potential new question');
+        // Filter for questions the user hasn't answered yet (no state or lastAnswered === 0)
+        const state = states[q.id];
+        return !state || state.lastAnswered === 0;
       });
     }
 
